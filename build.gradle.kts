@@ -27,9 +27,6 @@ dependencies {
     val kluentVersion = "1.68"
     testImplementation("org.amshove.kluent:kluent:$kluentVersion")
 
-    val plantUmlLibVersion = "1.2023.12"
-    implementation("net.sourceforge.plantuml:plantuml-mit:$plantUmlLibVersion")
-
 
     val log4jVersion = "1.2.14"
     implementation("log4j:log4j:$log4jVersion")
@@ -41,28 +38,6 @@ dependencies {
     implementation("com.github.kotlinx.ast:common:$kotlinParserVersion")
     implementation("com.github.kotlinx.ast:grammar-kotlin-parser-antlr-kotlin:$kotlinParserVersion")
 
-}
-
-val fatJar = task("FatJar", type = Jar::class) {
-
-    val jarName = "grucd.jar"
-
-    archiveFileName.set(jarName)
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    manifest {
-        attributes["Main-Class"] = "com.vandenbreemen.grucd.main.Main"
-
-    }
-    from(configurations.runtimeClasspath.get().map {
-        if(it.isDirectory) it else zipTree(it)
-    })
-    with(tasks.jar.get() as CopySpec)
-
-    copy {
-        from("build/libs/$jarName")
-        into("./")
-    }
-    println("Built and copied $jarName")
 }
 
 tasks.getByName<Test>("test") {
