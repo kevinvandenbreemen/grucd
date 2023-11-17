@@ -324,6 +324,29 @@ internal class KotlinParserTest {
 
     }
 
+    @Test
+    fun `should detect annotations with enumerated values`() {
+        val types = ParseKotlin().parse("src/test/resources/kotlin/ClassWithEnumeratedAnnotation.kt")
+        types.size shouldBeEqualTo 3
+
+        val type = types[2]
+        println(type)
+
+        type.annotations.shouldNotBeEmpty()
+        type.annotations.size shouldBeEqualTo 1
+
+        val annotation = type.annotations[0]
+
+        println(annotation)
+
+        annotation.typeName shouldBeEqualTo "SpecialTypedAnnotation"
+        annotation.arguments.size shouldBeEqualTo 1
+
+        val arg = annotation.arguments[0]
+        arg.key shouldBeEqualTo "type"
+        arg.value shouldBeEqualTo "Type2"
+    }
+
     private fun evaluate(ast: Ast) {
 
         logger.info("evaluating a ${ast.javaClass}")

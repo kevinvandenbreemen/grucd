@@ -34,4 +34,14 @@ public class Annotation {
     public List<Map.Entry<String, String>> getArguments() {
         return this.argumentsAndValues.entrySet().stream().toList();
     }
+
+    @Override
+    public String toString() {
+        StringBuilder r =  new StringBuilder("@Annotation(");
+        getArguments().stream().forEach((argVal)->{
+            r.append(argVal.getKey()).append(" = ").append(argVal.getValue());
+        });
+        return r.append(")").toString();
+
+    }
 }
