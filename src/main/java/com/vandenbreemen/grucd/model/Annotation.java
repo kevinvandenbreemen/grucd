@@ -35,11 +35,15 @@ public class Annotation {
         return this.argumentsAndValues.entrySet().stream().toList();
     }
 
+    public String getArgument(String argName) {
+        return this.argumentsAndValues.get(argName);
+    }
+
     @Override
     public String toString() {
         StringBuilder r =  new StringBuilder("@Annotation(");
         getArguments().stream().forEach((argVal)->{
-            r.append(argVal.getKey()).append(" = ").append(argVal.getValue());
+            r.append(argVal.getKey()).append(" = ").append(argVal.getValue()).append(", ");
         });
         return r.append(")").toString();
 

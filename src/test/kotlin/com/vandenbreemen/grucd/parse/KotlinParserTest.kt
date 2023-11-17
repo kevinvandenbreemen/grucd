@@ -347,6 +347,29 @@ internal class KotlinParserTest {
         arg.value shouldBeEqualTo "Type2"
     }
 
+    @Test
+    fun `should detect annotations with multiples values`() {
+        val types = ParseKotlin().parse("src/test/resources/kotlin/ClassWithNumericalAnnotations.kt")
+        types.size shouldBeEqualTo 2
+
+        val type = types[1]
+        println(type)
+
+        type.annotations.shouldNotBeEmpty()
+        type.annotations.size shouldBeEqualTo 1
+
+        val annotation = type.annotations[0]
+
+        println(annotation)
+
+        annotation.typeName shouldBeEqualTo "SpecialMultiArgAnnotation"
+        annotation.arguments.size shouldBeEqualTo 3
+
+        annotation.getArgument("someNum") shouldBeEqualTo "42"
+        annotation.getArgument("name") shouldBeEqualTo "Testing Annotation"
+        annotation.getArgument("type") shouldBeEqualTo "Type2"
+    }
+
     private fun evaluate(ast: Ast) {
 
         logger.info("evaluating a ${ast.javaClass}")
