@@ -5,6 +5,7 @@ import kotlin.Pair;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Abstract representation of any annotation
@@ -32,7 +33,7 @@ public class Annotation {
     }
 
     public List<Map.Entry<String, String>> getArguments() {
-        return this.argumentsAndValues.entrySet().stream().toList();
+        return this.argumentsAndValues.entrySet().stream().collect(Collectors.toList());
     }
 
     public String getArgument(String argName) {
