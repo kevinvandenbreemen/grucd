@@ -34,8 +34,6 @@ public class ParseJava {
 
     public List<Type> parse(String filePath) {
 
-        logger.debug("Parsing " + filePath);
-
         try {
             JavaParser parser = new JavaParser();
             ParseResult<CompilationUnit> unit = parser.parse(new File(filePath));
