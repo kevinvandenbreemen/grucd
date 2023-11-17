@@ -1,18 +1,17 @@
 package com.vandenbreemen.grucd.parse
 
 import com.vandenbreemen.grucd.model.*
+import com.vandenbreemen.grucd.model.Annotation
 import kotlinx.ast.common.AstSource
 import kotlinx.ast.common.ast.*
-import kotlinx.ast.common.klass.KlassDeclaration
-import kotlinx.ast.common.klass.KlassIdentifier
-import kotlinx.ast.common.klass.RawAst
-import kotlinx.ast.common.klass.identifierName
+import kotlinx.ast.common.klass.*
 import kotlinx.ast.grammar.kotlin.common.summary
 import kotlinx.ast.grammar.kotlin.common.summary.Import
 import kotlinx.ast.grammar.kotlin.common.summary.PackageHeader
 import kotlinx.ast.grammar.kotlin.target.antlr.kotlin.KotlinGrammarAntlrKotlinParser
 import org.apache.log4j.Logger
 import org.apache.log4j.NDC
+import java.lang.RuntimeException
 
 class ParseKotlin {
 
@@ -23,6 +22,8 @@ class ParseKotlin {
     companion object {
         private val logger:Logger = Logger.getLogger(ParseKotlin::class.java)
     }
+
+    private val annotationParser = KotlinAnnotationParser()
 
     private fun findImportList(astList: List<Ast>): List<String>? {
 
@@ -178,6 +179,25 @@ class ParseKotlin {
                 type.addSuperType(superTypeName)
             }
             declaration.children.forEach { child ->
+
+                (child as? KlassAnnotation)?.let { klassAnnotation ->
+
+                    if(klassAnnotation.identifier.isNotEmpty()) {
+                        val annotation = Annotation()
+                        klassAnnotation.identifier[0].identifier?.let { identTypeName->
+                            annotation.typeName = identTypeName;
+
+                            //  In order to properly parse this we're going to need to know its type so it's okay to handle the args in here
+                            annotationParser.buildAnnotationArguments(klassAnnotation, annotation)
+                        }
+
+                        type.addAnnotation(annotation)
+
+                    }
+
+                    logger.info(klassAnnotation)
+                }
+
                 (child as? KlassDeclaration)?.let { kd ->
                     kd.parameter.forEach { parm ->
                         processPropertyDeclaration(parm, type)

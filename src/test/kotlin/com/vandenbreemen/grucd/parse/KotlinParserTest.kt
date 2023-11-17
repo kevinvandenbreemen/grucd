@@ -303,6 +303,27 @@ internal class KotlinParserTest {
 
     }
 
+    @Test
+    fun `should detect annotation on a class`() {
+        val types = ParseKotlin().parse("src/test/resources/kotlin/ClassWithAnnotation.kt")
+        types.size shouldBeEqualTo 2
+
+        val type = types[1]
+        println(type)
+
+        type.annotations.shouldNotBeEmpty()
+        type.annotations.size shouldBeEqualTo 1
+
+        val annotation = type.annotations[0]
+        annotation.typeName shouldBeEqualTo "MyAnnotation"
+        annotation.arguments.size shouldBeEqualTo 1
+
+        val arg = annotation.arguments[0]
+        arg.key shouldBeEqualTo "name"
+        arg.value shouldBeEqualTo "Test Annotation"
+
+    }
+
     private fun evaluate(ast: Ast) {
 
         logger.info("evaluating a ${ast.javaClass}")

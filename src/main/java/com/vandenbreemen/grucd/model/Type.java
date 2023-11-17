@@ -1,5 +1,7 @@
 package com.vandenbreemen.grucd.model;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +38,9 @@ public class Type {
     private List<String> interfaceNames;
 
     private String classDoc;
+    @NotNull
+
+    private List<Annotation> annotations;
 
     public Type(String name, String pkg, TypeType type) {
         this.name = name;
@@ -45,6 +50,7 @@ public class Type {
         this.methods = new ArrayList<>();
         this.superTypeNames = new ArrayList<>();
         this.interfaceNames = new ArrayList<>();
+        this.annotations = new ArrayList<>();
     }
 
     public Type(String name, String pkg) {
@@ -117,6 +123,15 @@ public class Type {
 
     public void setClassDoc(String classDoc) {
         this.classDoc = classDoc;
+    }
+
+    public void addAnnotation(Annotation annotation) {
+        this.annotations.add(annotation);
+    }
+
+    @NotNull
+    public List<Annotation> getAnnotations() {
+        return annotations;
     }
 
     @Override
