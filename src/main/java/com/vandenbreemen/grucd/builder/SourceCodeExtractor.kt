@@ -23,16 +23,20 @@ class SourceCodeExtractor {
     }
 
     /**
-     * Annotation names to filter for
+     * General filtering logic
      */
-    private val annotations = mutableListOf<String>()
+    private val filters = mutableListOf<(Type)->Boolean>()
 
     /**
      * Adds the given annotation name to the list of annotations that will be filtered for.  Note that any non-annotated
      * types will no longer be included in the generated model
      */
     fun filterForAnnotationType(annotationName: String): SourceCodeExtractor {
-        this.annotations.add(annotationName)
+        filterEachType { type->
+            type.annotations.any { annotation ->
+                annotation.typeName == annotationName
+            }
+        }
         return this
     }
 
@@ -88,14 +92,21 @@ class SourceCodeExtractor {
         }
 
         //  Annotation filter
-        val filtered = if(annotations.isEmpty()) allTypes else allTypes.filter { type->
-            type.annotations.any { annotation ->
-                annotations.contains(annotation.typeName)
+        val filtered = if(filters.isEmpty()) allTypes else allTypes.filter { type->
+            if(filters.any { filter -> !filter(type) }) {
+                return@filter false
             }
+
+            true
         }
 
         val modelBuilder = ModelBuilder()
         return modelBuilder.build(filtered)
+    }
+
+    fun filterEachType(filter: (Type)->Boolean): SourceCodeExtractor {
+        this.filters.add(filter)
+        return this
     }
 
 

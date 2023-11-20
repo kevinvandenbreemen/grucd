@@ -25,4 +25,16 @@ class SourceCodeExtractorTest {
         model.types.filter { t->t.name == "ClassWithAnnotation" }.shouldNotBeEmpty()
     }
 
+    @Test
+    fun `should provide a way to give user the ability to filter types`() {
+        val extractor = SourceCodeExtractor().filterEachType { type ->
+            type.annotations.any { a -> a.typeName == "MyAnnotation" }
+        }
+        val fileNames = extractor.getFilenamesToVisit(inputFile = null, inputDir = "src/test/resources/kotlin/")
+        val model = extractor.buildModelWithFiles(fileNames)
+
+        model.types.filter { t->t.name == "KotlinClass" }.shouldBeEmpty()
+        model.types.filter { t->t.name == "ClassWithAnnotation" }.shouldNotBeEmpty()
+    }
+
 }
