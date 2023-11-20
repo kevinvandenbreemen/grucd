@@ -23,6 +23,20 @@ class SourceCodeExtractor {
     }
 
     /**
+     * Annotation names to filter for
+     */
+    private val annotations = mutableListOf<String>()
+
+    /**
+     * Adds the given annotation name to the list of annotations that will be filtered for.  Note that any non-annotated
+     * types will no longer be included in the generated model
+     */
+    fun filterForAnnotationType(annotationName: String): SourceCodeExtractor {
+        this.annotations.add(annotationName)
+        return this
+    }
+
+    /**
      * Given an input file or an input directory returns appropriate list of files to parse
      * @return  List of files to parse through
      */
@@ -73,8 +87,15 @@ class SourceCodeExtractor {
             }
         }
 
+        //  Annotation filter
+        val filtered = if(annotations.isEmpty()) allTypes else allTypes.filter { type->
+            type.annotations.any { annotation ->
+                annotations.contains(annotation.typeName)
+            }
+        }
+
         val modelBuilder = ModelBuilder()
-        return modelBuilder.build(allTypes)
+        return modelBuilder.build(filtered)
     }
 
 
