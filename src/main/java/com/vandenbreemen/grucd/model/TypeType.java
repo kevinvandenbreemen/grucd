@@ -4,6 +4,8 @@ public enum TypeType {
 
     Class,
     Enum,
-    Interface
+    Interface,
+
+    Annotation,
 
 }

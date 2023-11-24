@@ -66,6 +66,36 @@ public class ParseJava {
                         }
 
                         @Override
+                        public void visit(AnnotationDeclaration n, VisitorContext visitorContext) {
+                            String name = n.getNameAsString();
+                            final String[] packageName = {""};
+                            n.getFullyQualifiedName().ifPresent(new Consumer<String>() {
+                                @Override
+                                public void accept(String fullName) {
+                                    if(fullName.length() > name.length()) {
+                                        packageName[0] = fullName.substring(0, fullName.length() - (name.length() + 1));
+                                    }
+                                }
+                            });
+
+                            Type currentType = new Type(n.getNameAsString(), packageName[0], TypeType.Annotation);
+                            currentType.setImports(imports);
+
+                            if(visitorContext != null) {
+                                currentType.setParentType(visitorContext.parentType);
+                            }
+
+                            result.add(currentType);
+
+                            NDC.push(currentType.getName());
+                            try {
+                                super.visit(n, new VisitorContext(currentType));
+                            } finally {
+                                NDC.pop();
+                            }
+                        }
+
+                        @Override
                         public void visit(ClassOrInterfaceDeclaration n, VisitorContext visitorContext) {
 
                             String name = n.getNameAsString();

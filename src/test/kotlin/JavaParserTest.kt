@@ -273,4 +273,14 @@ class JavaParserTest {
         model.unusedTypes.size shouldBeEqualTo 1
     }
 
+    @Test
+    fun `should parse annotations`() {
+        val types = ParseJava().parse("src/test/resources/annotations/JavaAnnotation.java")
+        val model = ModelBuilder().build(types)
+
+        types.size shouldBeEqualTo 1
+
+        println(model.types)
+    }
+
 }
