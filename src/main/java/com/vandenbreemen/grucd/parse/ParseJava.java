@@ -5,8 +5,11 @@ import com.github.javaparser.ParseResult;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.Modifier;
+import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.comments.JavadocComment;
+import com.github.javaparser.ast.expr.AnnotationExpr;
+import com.github.javaparser.ast.expr.MemberValuePair;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import com.vandenbreemen.grucd.model.Parameter;
@@ -19,6 +22,8 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public class ParseJava {
 
@@ -109,8 +114,26 @@ public class ParseJava {
                                 }
                             });
 
+
+
                             Type currentType = new Type(n.getNameAsString(), packageName[0], n.isInterface() ? TypeType.Interface : TypeType.Class);
                             currentType.setImports(imports);
+
+                            for(AnnotationExpr anExpr : n.getAnnotations()) {
+                                Annotation annotation = new Annotation();
+                                annotation.setTypeName(anExpr.getNameAsString());
+
+                                for (Node childNode : anExpr.getChildNodes()) {
+                                    if(childNode instanceof MemberValuePair) {
+                                        String chArg = ((MemberValuePair)childNode).getName().asString();
+                                        String chVal = ((MemberValuePair)childNode).getValue().toString();
+
+                                        annotation.addArgument(chArg, chVal);
+                                    }
+                                }
+
+                                currentType.addAnnotation(annotation);
+                            }
 
                             if(visitorContext != null) {
                                 currentType.setParentType(visitorContext.parentType);

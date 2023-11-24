@@ -3,6 +3,7 @@ import com.vandenbreemen.grucd.model.RelationType
 import com.vandenbreemen.grucd.model.Visibility
 import com.vandenbreemen.grucd.parse.ParseJava
 import org.amshove.kluent.shouldBeEqualTo
+import org.amshove.kluent.shouldBeGreaterThan
 import org.amshove.kluent.shouldNotBeEmpty
 import org.amshove.kluent.shouldNotBeNull
 import org.junit.jupiter.api.Test
@@ -281,6 +282,21 @@ class JavaParserTest {
         types.size shouldBeEqualTo 1
 
         println(model.types)
+    }
+
+    @Test
+    fun `should detect annotated java classes`() {
+        val types = ParseJava().parse("src/test/resources/annotations/AnnotatedClasses.java")
+        types.size shouldBeEqualTo 3
+
+        val annotated = types[2]
+        println(annotated)
+
+        annotated.annotations.size shouldBeEqualTo 1
+        with(annotated.annotations[0]) {
+            println(this)
+            this.typeName shouldBeEqualTo "MyJavaAnnotation"
+        }
     }
 
 }
