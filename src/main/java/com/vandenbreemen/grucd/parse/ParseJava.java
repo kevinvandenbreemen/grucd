@@ -34,6 +34,8 @@ public class ParseJava {
 
     public List<Type> parse(String filePath) {
 
+        logger.debug("Parsing " + filePath);
+
         try {
             JavaParser parser = new JavaParser();
             ParseResult<CompilationUnit> unit = parser.parse(new File(filePath));
@@ -141,6 +143,8 @@ public class ParseJava {
 
                         @Override
                         public void visit(FieldDeclaration n, VisitorContext visitorContext) {
+
+                            logger.debug("fieldDeclaration:  " + n.toString());
 
                             Type currentType = visitorContext.parentType;
 
