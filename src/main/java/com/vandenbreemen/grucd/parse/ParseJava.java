@@ -9,6 +9,7 @@ import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.comments.JavadocComment;
 import com.github.javaparser.ast.expr.AnnotationExpr;
+import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MemberValuePair;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
@@ -36,6 +37,8 @@ public class ParseJava {
             this.parentType = parentType;
         }
     }
+
+    private JavaValueExpressionInteractor javaValueExpressionInteractor = new JavaValueExpressionInteractor();
 
     public List<Type> parse(String filePath) {
 
@@ -126,9 +129,9 @@ public class ParseJava {
                                 for (Node childNode : anExpr.getChildNodes()) {
                                     if(childNode instanceof MemberValuePair) {
                                         String chArg = ((MemberValuePair)childNode).getName().asString();
-                                        String chVal = ((MemberValuePair)childNode).getValue().toString();
+                                        Expression chVal = ((MemberValuePair)childNode).getValue();
 
-                                        annotation.addArgument(chArg, chVal);
+                                        annotation.addArgument(chArg, javaValueExpressionInteractor.toString(chVal));
                                     }
                                 }
 

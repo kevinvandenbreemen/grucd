@@ -294,8 +294,11 @@ class JavaParserTest {
 
         annotated.annotations.size shouldBeEqualTo 1
         with(annotated.annotations[0]) {
-            println(this)
+
             this.typeName shouldBeEqualTo "MyJavaAnnotation"
+            this.arguments.size shouldBeEqualTo 2
+            getArgument("getName") shouldBeEqualTo "TestAnnotation"
+            getArgument("type") shouldBeEqualTo "Type2"
         }
     }
 
