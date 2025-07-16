@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.8.22"
+    kotlin("jvm") version "2.0.0"
     java
     `maven-publish`
     `java-library`
@@ -10,6 +10,10 @@ val versionNumber = versionRaw.readText()
 
 group = "com.vandenbreemen"
 version = versionNumber
+
+kotlin {
+    jvmToolchain(21)
+}
 
 repositories {
     mavenCentral()
