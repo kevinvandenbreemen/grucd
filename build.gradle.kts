@@ -36,7 +36,7 @@ dependencies {
 
     val kotlinParserVersion = "0.1.0"
     implementation("com.github.kotlinx.ast:common:$kotlinParserVersion")
-    implementation("com.github.kotlinx.ast:grammar-kotlin-parser-antlr-kotlin:$kotlinParserVersion")
+    implementation("com.github.kotlinx.ast:grammar-kotlin-parser-antlr-kotlin-jvm:$kotlinParserVersion")
 
 }
 
