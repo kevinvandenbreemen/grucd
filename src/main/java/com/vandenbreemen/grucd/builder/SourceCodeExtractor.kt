@@ -11,6 +11,11 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.isDirectory
 
+internal data class FileAssociatedChecksumAndTypes (
+    val checksum: String,
+    val types: MutableList<Type>
+)
+
 /**
  * Scours a file or directory for files to parse
  */
@@ -30,7 +35,7 @@ class SourceCodeExtractor {
     /**
      * Mapping from file absolute path to its checksum.  This is used to detect changes in files
      */
-    private var fileChecksums: MutableMap<String, String>? = null
+    private var fileChecksums: MutableMap<String, FileAssociatedChecksumAndTypes>? = null
 
     /**
      * Adds the given annotation name to the list of annotations that will be filtered for.  Note that any non-annotated
@@ -54,26 +59,60 @@ class SourceCodeExtractor {
         if (inputFile != null) {
             logger.info("Parsing single file '$inputFile'")
             filesToVisit.add(inputFile)
+            if (fileChecksums != null) {
+                fileChecksums!![inputFile] = FileAssociatedChecksumAndTypes(
+                    checksum = calculateMd5(inputFile),
+                    types = mutableListOf()
+                )
+            }
         } else {
             logger.info("Parsing directory $inputDir")
             try {
                 Files.walk(Paths.get(inputDir)).filter { filePath: Path ->
                     filePath.fileName.toString().endsWith(".java") && !filePath.isDirectory()
                 }.forEach { path: Path ->
-                    logger.debug("path (java)=" + path.toFile().absolutePath)
-                    filesToVisit.add(path.toFile().absolutePath)
+                    val absPath = path.toFile().absolutePath
+                    logger.debug("path (java)=" + absPath)
+                    filesToVisit.add(absPath)
+                    if (fileChecksums != null) {
+                        fileChecksums!![absPath] = FileAssociatedChecksumAndTypes(
+                            checksum = calculateMd5(absPath),
+                            types = mutableListOf()
+                        )
+                    }
                 }
                 Files.walk(Paths.get(inputDir)).filter { filePath: Path ->
                     filePath.fileName.toString().endsWith(".kt") && !filePath.isDirectory()
                 }.forEach { path: Path ->
-                    logger.debug("path (kotlin)=" + path.toFile().absolutePath)
-                    filesToVisit.add(path.toFile().absolutePath)
+                    val absPath = path.toFile().absolutePath
+                    logger.debug("path (kotlin)=" + absPath)
+                    filesToVisit.add(absPath)
+                    if (fileChecksums != null) {
+                        fileChecksums!![absPath] = FileAssociatedChecksumAndTypes(
+                            checksum = calculateMd5(absPath),
+                            types = mutableListOf()
+                        )
+                    }
                 }
             } catch (ioe: IOException) {
                 logger.error("Failed to get files to parse", ioe)
             }
         }
         return filesToVisit
+    }
+
+    private fun calculateMd5(filePath: String): String {
+        val file = java.io.File(filePath)
+        if (!file.exists()) return ""
+        val md = java.security.MessageDigest.getInstance("MD5")
+        file.inputStream().use { fis ->
+            val buffer = ByteArray(8192)
+            var read: Int
+            while (fis.read(buffer).also { read = it } != -1) {
+                md.update(buffer, 0, read)
+            }
+        }
+        return md.digest().joinToString("") { "%02x".format(it) }
     }
 
     /**
