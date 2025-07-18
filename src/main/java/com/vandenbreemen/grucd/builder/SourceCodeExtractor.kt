@@ -149,10 +149,19 @@ class SourceCodeExtractor {
         return this
     }
 
+    /**
+     * @return  Updated copy of the model with the changes from the files in the input directory
+     */
     fun updateModelWithFileChanges(
         model: Model,
-        inputDir: String) {
-        TODO("Not yet implemented")
+        inputDir: String): Model {
+
+        //  Get list of files to visit
+        val filesToVisit = getFilenamesToVisit(inputFile = null, inputDir = inputDir)
+
+        TODO("Working on it still")
+
+
     }
 
 
