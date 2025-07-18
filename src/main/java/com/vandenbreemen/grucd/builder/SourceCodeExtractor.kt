@@ -13,7 +13,7 @@ import kotlin.io.path.isDirectory
 
 internal data class FileAssociatedChecksumAndTypes (
     val checksum: String,
-    val types: MutableList<Type>
+    val types: List<Type>
 )
 
 /**
@@ -59,40 +59,20 @@ class SourceCodeExtractor {
         if (inputFile != null) {
             logger.info("Parsing single file '$inputFile'")
             filesToVisit.add(inputFile)
-            if (fileChecksums != null) {
-                fileChecksums!![inputFile] = FileAssociatedChecksumAndTypes(
-                    checksum = calculateMd5(inputFile),
-                    types = mutableListOf()
-                )
-            }
         } else {
             logger.info("Parsing directory $inputDir")
             try {
                 Files.walk(Paths.get(inputDir)).filter { filePath: Path ->
                     filePath.fileName.toString().endsWith(".java") && !filePath.isDirectory()
                 }.forEach { path: Path ->
-                    val absPath = path.toFile().absolutePath
-                    logger.debug("path (java)=" + absPath)
-                    filesToVisit.add(absPath)
-                    if (fileChecksums != null) {
-                        fileChecksums!![absPath] = FileAssociatedChecksumAndTypes(
-                            checksum = calculateMd5(absPath),
-                            types = mutableListOf()
-                        )
-                    }
+                    logger.debug("path (java)=" + path.toFile().absolutePath)
+                    filesToVisit.add(path.toFile().absolutePath)
                 }
                 Files.walk(Paths.get(inputDir)).filter { filePath: Path ->
                     filePath.fileName.toString().endsWith(".kt") && !filePath.isDirectory()
                 }.forEach { path: Path ->
-                    val absPath = path.toFile().absolutePath
-                    logger.debug("path (kotlin)=" + absPath)
-                    filesToVisit.add(absPath)
-                    if (fileChecksums != null) {
-                        fileChecksums!![absPath] = FileAssociatedChecksumAndTypes(
-                            checksum = calculateMd5(absPath),
-                            types = mutableListOf()
-                        )
-                    }
+                    logger.debug("path (kotlin)=" + path.toFile().absolutePath)
+                    filesToVisit.add(path.toFile().absolutePath)
                 }
             } catch (ioe: IOException) {
                 logger.error("Failed to get files to parse", ioe)
@@ -135,7 +115,7 @@ class SourceCodeExtractor {
             fileChecksums?.let {
                 if (it.containsKey(file)) {
                     val old = it[file]
-                    it[file] = old!!.copy(types = parsedTypes.toMutableList())
+                    it[file] = old!!.copy(types = parsedTypes)
                 } else {
                     it[file] = FileAssociatedChecksumAndTypes(
                         checksum = calculateMd5(file),
