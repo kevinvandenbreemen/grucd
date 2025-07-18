@@ -42,17 +42,11 @@ public class Model {
 
     public Model getTypesReferencingOrReferencedBy(Type type, int numLevels) {
 
-        if(numLevels < 0) {
-            return new Model(Collections.emptyList());
-        }
-
-        System.out.println("Finding types referencing or referenced by " + type.getName() + " at level " + numLevels);
-
         HashSet<Type> relatedTypes = new HashSet<>();
         relatedTypes.add(type); // Include the original type
 
         // Get all related types
-        relatedTypes.addAll(getRelatedTypesRecursive(type, numLevels));
+        relatedTypes.addAll(getRelatedTypesRecursive(type, numLevels, relatedTypes));
 
         // Create list of types for the new model
         List<Type> typesList = new ArrayList<>(relatedTypes);
@@ -76,23 +70,22 @@ public class Model {
         return filteredModel;
     }
 
-    private List<Type> getRelatedTypesRecursive(Type type, int numLevels) {
-        if(numLevels < 0) {
+    private List<Type> getRelatedTypesRecursive(Type type, int numLevels, HashSet<Type> result) {
+        if(numLevels == 0) {
             return Collections.emptyList();
         }
 
-        HashSet<Type> result = new HashSet<>();
         for (TypeRelation relation : relations) {
             if(relation.getFrom() == type) {
                 if(result.add(relation.getTo())) {
                     result.addAll(
-                            getRelatedTypesRecursive(relation.getTo(), numLevels - 1) // Recursively find types referencing this type
+                            getRelatedTypesRecursive(relation.getTo(), numLevels - 1, result) // Recursively find types referencing this type
                     );
                 }
             } else if(relation.getTo() == type) {
                 if(result.add(relation.getFrom())) {
                     result.addAll(
-                            getRelatedTypesRecursive(relation.getFrom(), numLevels - 1) // Recursively find types referenced by this type
+                            getRelatedTypesRecursive(relation.getFrom(), numLevels - 1, result) // Recursively find types referenced by this type
                     );
                 }
             }
