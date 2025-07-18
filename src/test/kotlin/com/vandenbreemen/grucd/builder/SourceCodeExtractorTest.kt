@@ -2,7 +2,9 @@ package com.vandenbreemen.grucd.builder
 
 import com.strumenta.kotlinmultiplatform.Type
 import com.vandenbreemen.grucd.builder.SourceCodeExtractor
+import org.amshove.kluent.should
 import org.amshove.kluent.shouldBeEmpty
+import org.amshove.kluent.shouldBeEqualTo
 import org.amshove.kluent.shouldBeLessThan
 import org.amshove.kluent.shouldBeNull
 import org.amshove.kluent.shouldNotBeEmpty
@@ -111,6 +113,13 @@ class SourceCodeExtractorTest {
 
         //  This has been observed to be on the order of magnitudes faster so should always pass
         postCacheDuration shouldBeLessThan preCacheDuration
+
+        //  Sanity test similar contents between models
+        model.typesWithName("ClassWithListOfEncapsulatedDeclared")[0].fields.size shouldBeEqualTo 1
+        newModel.typesWithName("ClassWithListOfEncapsulatedDeclared")[0].fields.size shouldBeEqualTo 1
+
+        model.types.size shouldBeEqualTo newModel.types.size
+
 
 
     }

@@ -54,4 +54,8 @@ public class Field {
     public Visibility getVisibility() {
         return visibility;
     }
+
+    public String toString() {
+        return name + " : " + typeName;
+    }
 }

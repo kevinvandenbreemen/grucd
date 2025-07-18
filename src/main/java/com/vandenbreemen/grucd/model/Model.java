@@ -107,7 +107,7 @@ public class Model {
     public String toString() {
         StringBuilder sb = new StringBuilder("Model {\n");
         for (Type type : types) {
-            sb.append(" ").append(type.getName()).append(",\n");
+            sb.append(" ").append(type.toString()).append("\n");
         }
         sb.append("}");
         return sb.toString();
