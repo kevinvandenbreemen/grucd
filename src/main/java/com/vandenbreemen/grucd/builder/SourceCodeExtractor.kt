@@ -99,6 +99,10 @@ class SourceCodeExtractor {
      * Given the list of files to visit generates a [Model] by parsing these files
      */
     fun buildModelWithFiles(filesToVisit: List<String>): Model {
+        return doVisitSpecificFiles(filesToVisit)
+    }
+
+    private fun doVisitSpecificFiles(filesToVisit: List<String>): Model {
         val java = ParseJava()
         val kotlin = ParseKotlin()
 
