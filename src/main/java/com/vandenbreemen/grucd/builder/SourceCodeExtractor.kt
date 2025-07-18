@@ -125,14 +125,25 @@ class SourceCodeExtractor {
         val allTypes: MutableList<Type> = ArrayList<Type>()
 
         filesToVisit.forEach{ file ->
-            if (file.endsWith(".java")) {
-                java.parse(file) ?.let { parseResult->
-                    allTypes.addAll(parseResult)
-                }
-
-            } else if (file.endsWith(".kt")) {
-                allTypes.addAll(kotlin.parse(file))
+            val parsedTypes: List<Type> = when {
+                file.endsWith(".java") -> java.parse(file) ?: emptyList()
+                file.endsWith(".kt") -> kotlin.parse(file)
+                else -> emptyList()
             }
+            allTypes.addAll(parsedTypes)
+
+            fileChecksums?.let {
+                if (it.containsKey(file)) {
+                    val old = it[file]
+                    it[file] = old!!.copy(types = parsedTypes.toMutableList())
+                } else {
+                    it[file] = FileAssociatedChecksumAndTypes(
+                        checksum = calculateMd5(file),
+                        types = parsedTypes.toMutableList()
+                    )
+                }
+            }
+
         }
 
         //  Annotation filter
