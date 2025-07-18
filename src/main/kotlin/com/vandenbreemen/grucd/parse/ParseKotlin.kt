@@ -118,7 +118,7 @@ class ParseKotlin {
                     val type = Type(it.identifier?.rawName ?: "",
                         pkg?.identifier?.let { pkgIdentifier->
                             if(pkgIdentifier.isNotEmpty()) {
-                                pkgIdentifier[0].rawName
+                                pkgIdentifier.joinToString(".") { it.rawName }
                             } else {
                                 null
                             }

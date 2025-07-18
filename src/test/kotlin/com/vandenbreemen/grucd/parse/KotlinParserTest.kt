@@ -110,8 +110,8 @@ internal class KotlinParserTest {
 
     @Test
     fun `should determine the package name of a Kotlin class`() {
-        val types = ParseKotlin().parse("src/test/resources/kotlin/KotlinClass.kt")
-        types[0].pkg shouldBeEqualTo "kotlin"
+        val types = ParseKotlin().parse("src/test/resources/com/example/fake/FakeBusinessService.kt")
+        types[0].pkg shouldBeEqualTo "com.example.fake"
     }
 
     @Test
