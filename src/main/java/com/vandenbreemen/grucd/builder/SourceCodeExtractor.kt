@@ -28,6 +28,11 @@ class SourceCodeExtractor {
     private val filters = mutableListOf<(Type)->Boolean>()
 
     /**
+     * Mapping from file absolute path to its checksum.  This is used to detect changes in files
+     */
+    private var fileChecksums: MutableMap<String, String>? = null
+
+    /**
      * Adds the given annotation name to the list of annotations that will be filtered for.  Note that any non-annotated
      * types will no longer be included in the generated model
      */
@@ -107,6 +112,17 @@ class SourceCodeExtractor {
     fun filterEachType(filter: (Type)->Boolean): SourceCodeExtractor {
         this.filters.add(filter)
         return this
+    }
+
+    fun detectFileDeltas(): SourceCodeExtractor {
+        fileChecksums = mutableMapOf()
+        return this
+    }
+
+    fun updateModelWithFileChanges(
+        model: Model,
+        inputDir: String) {
+        TODO("Not yet implemented")
     }
 
 
