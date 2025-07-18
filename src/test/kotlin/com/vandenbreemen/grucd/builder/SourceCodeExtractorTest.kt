@@ -3,6 +3,7 @@ package com.vandenbreemen.grucd.builder
 import com.strumenta.kotlinmultiplatform.Type
 import com.vandenbreemen.grucd.builder.SourceCodeExtractor
 import org.amshove.kluent.shouldBeEmpty
+import org.amshove.kluent.shouldBeLessThan
 import org.amshove.kluent.shouldBeNull
 import org.amshove.kluent.shouldNotBeEmpty
 import org.amshove.kluent.shouldNotBeNull
@@ -83,7 +84,10 @@ class SourceCodeExtractorTest {
 
         val fileNames = extractor.getFilenamesToVisit(inputFile = null, inputDir = "src/test/resources/kotlin/")
 
+        val startTime = System.nanoTime()
         val model = extractor.buildModelWithFiles(fileNames)
+        val preCacheDuration = System.nanoTime() - startTime
+
         val fakeClass = model.typesWithName("LocalUpdate")[0]
         fakeClass.fields.firstOrNull() { f->f.name == "newField" }.shouldBeNull()
 
@@ -91,14 +95,22 @@ class SourceCodeExtractorTest {
         writeFakeCodeToTemporaryFile( newField = "newField" )
 
         //  Now trigger a model update
+
+        val startTime2 = System.nanoTime()
         val newModel = extractor.updateModelWithFileChanges(
             inputDir = "src/test/resources/kotlin/")
+        val postCacheDuration = System.nanoTime() - startTime2
 
         val updatedFakeClass = newModel.typesWithName("LocalUpdate")[0]
 
         updatedFakeClass.fields.firstOrNull { f->f.name == "newField" }.shouldNotBeNull()
 
-        //  Compare the 2 models
+        //  Compare the durations
+        println("Pre-cache duration: ${preCacheDuration / 1_000_000} ms")
+        println("Post-cache duration: ${postCacheDuration / 1_000_000} ms")
+
+        //  This has been observed to be on the order of magnitudes faster so should always pass
+        postCacheDuration shouldBeLessThan preCacheDuration
 
 
     }
