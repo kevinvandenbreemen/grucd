@@ -15,7 +15,7 @@ import kotlin.random.Random
 
 class SourceCodeExtractorTest {
 
-    val dynamicFilePath = "src/test/resources/kotlin/localupdate"
+    val dynamicFilePath = "./src/test/resources/kotlin/localupdate"
     val dynamicFileName = "LocalUpdate.kt"
 
     @AfterEach
@@ -127,6 +127,7 @@ class SourceCodeExtractorTest {
     private fun writeFakeCodeToTemporaryFile(newField: String? = null){
 
 
+
         //  Write some fake code to a fake class in here:
         val fakeCode = """
             package kotlin
@@ -145,6 +146,13 @@ class SourceCodeExtractorTest {
             }
         """.trimIndent()
         val file = java.io.File("$dynamicFilePath/$dynamicFileName")
+
+        //  Create the file first?
+        if (!file.exists()) {
+            file.parentFile.mkdirs() // Ensure the directory exists
+            file.createNewFile() // Create the file
+        }
+
         file.writeText(fakeCode)
     }
 
