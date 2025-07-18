@@ -115,7 +115,14 @@ class ParseKotlin {
 
                 (astItem as? KlassDeclaration)?.let {
 
-                    val type = Type(it.identifier?.rawName ?: "", pkg?.identifier?.get(0)?.rawName ?: "",
+                    val type = Type(it.identifier?.rawName ?: "",
+                        pkg?.identifier?.let { pkgIdentifier->
+                            if(pkgIdentifier.isNotEmpty()) {
+                                pkgIdentifier[0].rawName
+                            } else {
+                                null
+                            }
+                        } ?: "",
                         if(it.keyword == "interface") {TypeType.Interface } else { TypeType.Class }
                         )
                     type.imports = imports
