@@ -81,6 +81,13 @@ class SourceCodeExtractor {
         return filesToVisit
     }
 
+    /**
+     * Given the list of files to visit generates a [Model] by parsing these files
+     */
+    fun buildModelWithFiles(filesToVisit: List<String>): Model {
+        return doVisitSpecificFiles(filesToVisit, false)
+    }
+
     private fun calculateMd5(filePath: String): String {
         val file = java.io.File(filePath)
         if (!file.exists()) return ""
@@ -95,39 +102,38 @@ class SourceCodeExtractor {
         return md.digest().joinToString("") { "%02x".format(it) }
     }
 
-    /**
-     * Given the list of files to visit generates a [Model] by parsing these files
-     */
-    fun buildModelWithFiles(filesToVisit: List<String>): Model {
-        return doVisitSpecificFiles(filesToVisit)
-    }
-
-    private fun doVisitSpecificFiles(filesToVisit: List<String>): Model {
+    private fun doVisitSpecificFiles(filesToVisit: List<String>, useCachedTypes: Boolean): Model {
         val java = ParseJava()
         val kotlin = ParseKotlin()
 
         val allTypes: MutableList<Type> = ArrayList<Type>()
 
-        filesToVisit.forEach{ file ->
-            val parsedTypes: List<Type> = when {
-                file.endsWith(".java") -> java.parse(file) ?: emptyList()
-                file.endsWith(".kt") -> kotlin.parse(file)
-                else -> emptyList()
+        filesToVisit.forEach { file ->
+            val cachedTypes = fileChecksums?.get(file)
+            val currentChecksum = calculateMd5(file)
+            val parsedTypes: List<Type> = if (
+                useCachedTypes && cachedTypes != null && cachedTypes.checksum == currentChecksum
+            ) {
+                cachedTypes.types
+            } else {
+                when {
+                    file.endsWith(".java") -> java.parse(file) ?: emptyList()
+                    file.endsWith(".kt") -> kotlin.parse(file)
+                    else -> emptyList()
+                }
             }
             allTypes.addAll(parsedTypes)
 
             fileChecksums?.let {
                 if (it.containsKey(file)) {
-                    val old = it[file]
-                    it[file] = old!!.copy(types = parsedTypes)
+                    it[file] = it[file]!!.copy(types = parsedTypes, checksum = currentChecksum)
                 } else {
                     it[file] = FileAssociatedChecksumAndTypes(
-                        checksum = calculateMd5(file),
+                        checksum = currentChecksum,
                         types = parsedTypes.toMutableList()
                     )
                 }
             }
-
         }
 
         //  Annotation filter
@@ -156,15 +162,11 @@ class SourceCodeExtractor {
     /**
      * @return  Updated copy of the model with the changes from the files in the input directory
      */
-    fun updateModelWithFileChanges(
-        model: Model,
-        inputDir: String): Model {
+    fun updateModelWithFileChanges(inputDir: String): Model {
 
         //  Get list of files to visit
         val filesToVisit = getFilenamesToVisit(inputFile = null, inputDir = inputDir)
-
-        TODO("Working on it still")
-
+        return doVisitSpecificFiles(filesToVisit, useCachedTypes = true)
 
     }
 

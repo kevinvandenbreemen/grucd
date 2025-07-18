@@ -6,6 +6,7 @@ import org.amshove.kluent.shouldBeEmpty
 import org.amshove.kluent.shouldBeNull
 import org.amshove.kluent.shouldNotBeEmpty
 import org.amshove.kluent.shouldNotBeNull
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
 
@@ -14,6 +15,7 @@ class SourceCodeExtractorTest {
     val dynamicFilePath = "src/test/resources/kotlin/localupdate"
     val dynamicFileName = "LocalUpdate.kt"
 
+    @AfterEach
     fun tearDown() {
         //  Remove the temporary file
         val file = java.io.File("$dynamicFilePath/$dynamicFileName")
@@ -89,11 +91,11 @@ class SourceCodeExtractorTest {
         writeFakeCodeToTemporaryFile( newField = "newField" )
 
         //  Now trigger a model update
-        extractor.updateModelWithFileChanges(
-            model,
+        val newModel = extractor.updateModelWithFileChanges(
             inputDir = "src/test/resources/kotlin/")
 
-        val updatedFakeClass = model.typesWithName("LocalUpdate")[0]
+        val updatedFakeClass = newModel.typesWithName("LocalUpdate")[0]
+
         updatedFakeClass.fields.firstOrNull { f->f.name == "newField" }.shouldNotBeNull()
 
         //  Compare the 2 models
