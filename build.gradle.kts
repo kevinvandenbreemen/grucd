@@ -5,7 +5,7 @@ plugins {
     `java-library`
 }
 
-val versionRaw = File("src/main/resources/version.properties")
+val versionRaw = File(project.rootDir.absolutePath + File.separator +"src/main/resources/version.properties")
 val versionNumber = versionRaw.readText()
 
 group = "com.vandenbreemen"
