@@ -31,6 +31,9 @@ class SwiftParsingInteractor() {
             val input = CharStreams.fromFileName(filePath)
             val lexer = Swift5Lexer(input)
             val tokens = CommonTokenStream(lexer)
+
+            logger.trace("Got tokens:\n${tokens.tokens.joinToString("\n") { it.text }}")
+
             val parser = Swift5Parser(tokens)
 
             // Parse the top-level structure
@@ -52,10 +55,28 @@ class SwiftParsingInteractor() {
      */
     private class SwiftTypeVisitor(private val filePath: String) : Swift5ParserBaseListener() {
 
+        private var currentType: Type? = null
+
         private val types = mutableListOf<Type>()
         private val logger: Logger = Logger.getLogger(SwiftTypeVisitor::class.java)
 
         fun getTypes(): List<Type> = types.toList()
+
+
+        override fun enterClass_declaration(ctx: Swift5Parser.Class_declarationContext?) {
+            super.enterClass_declaration(ctx)
+
+            val className = ctx?.class_name()?.text
+            logger.debug( "Entering class declaration: $className")
+
+            className?.let { newClass->
+                currentType = Type(newClass, "", TypeType.Class).also { nuType->
+                    types.add(nuType)
+                }
+
+                logger.debug("Added class type: $newClass")
+            }
+        }
 
         // Generic approach to handle all declarations by looking for specific patterns in text
         override fun enterEveryRule(ctx: ParserRuleContext?) {
