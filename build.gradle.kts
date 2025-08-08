@@ -59,11 +59,32 @@ tasks.compileKotlin {
     dependsOn(tasks.generateGrammarSource)
 }
 
+tasks.generateTestGrammarSource {
+    // mirror main config, if you want custom args/dir
+    (this as Task).apply {
+        // If you want to customize:
+        // (tasks["generateTestGrammarSource"] as AntlrTask).arguments += listOf("-listener","-visitor")
+        // (tasks["generateTestGrammarSource"] as AntlrTask).outputDirectory = file("$buildDir/generated-src/antlr/test")
+    }
+}
+
+sourceSets.test {
+    java.srcDir("build/generated-src/antlr/test")
+}
+
 sourceSets.main {
     with(this) {
         antlr.srcDir("src/main/antlr")
         java.srcDir("build/generated-src/antlr/main")
     }
+}
+
+tasks.compileTestKotlin {
+    dependsOn(tasks.named("generateTestGrammarSource"))
+}
+
+tasks.compileTestJava {
+    dependsOn(tasks.generateTestGrammarSource)
 }
 
 tasks.getByName<Test>("test") {
