@@ -45,12 +45,14 @@ dependencies {
 
     //  Swift parsing
     val antlrVersion = "4.13.1"
+    antlr("org.antlr:antlr4:4.13.1")
     implementation("org.antlr:antlr4-runtime:$antlrVersion")
 
 }
 
 tasks.generateGrammarSource {
-    arguments = arguments + listOf("-visitor", "-listener", "-package", "com.vandenbreemen.grucd.parse.interactor.swift")
+    arguments = arguments + listOf("-listener", "-visitor")
+    outputDirectory = File("build/generated-src/antlr/main")
 }
 
 tasks.compileKotlin {
@@ -58,7 +60,10 @@ tasks.compileKotlin {
 }
 
 sourceSets.main {
-    java.srcDir("build/generated-src/antlr/main")
+    with(this) {
+        antlr.srcDir("src/main/antlr")
+        java.srcDir("build/generated-src/antlr/main")
+    }
 }
 
 tasks.getByName<Test>("test") {
