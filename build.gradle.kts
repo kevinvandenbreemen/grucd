@@ -3,6 +3,7 @@ plugins {
     java
     `maven-publish`
     `java-library`
+    antlr
 }
 
 val versionRaw = File(project.rootDir.absolutePath + File.separator +"src/main/resources/version.properties")
@@ -42,6 +43,22 @@ dependencies {
     implementation("com.github.kotlinx.ast:common:$kotlinParserVersion")
     implementation("com.github.kotlinx.ast:grammar-kotlin-parser-antlr-kotlin-jvm:$kotlinParserVersion")
 
+    //  Swift parsing
+    val antlrVersion = "4.13.1"
+    implementation("org.antlr:antlr4-runtime:$antlrVersion")
+
+}
+
+tasks.generateGrammarSource {
+    arguments = arguments + listOf("-visitor", "-listener", "-package", "com.vandenbreemen.grucd.parse.interactor.swift")
+}
+
+tasks.compileKotlin {
+    dependsOn(tasks.generateGrammarSource)
+}
+
+sourceSets.main {
+    java.srcDir("build/generated-src/antlr/main")
 }
 
 tasks.getByName<Test>("test") {
