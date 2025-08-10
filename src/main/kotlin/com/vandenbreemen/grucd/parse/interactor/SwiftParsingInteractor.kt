@@ -14,6 +14,7 @@ import java.io.File
 import Swift5Lexer
 import Swift5Parser
 import Swift5ParserBaseListener
+import org.apache.log4j.NDC
 
 class SwiftParsingInteractor() {
 
@@ -67,7 +68,7 @@ class SwiftParsingInteractor() {
             super.enterClass_declaration(ctx)
 
             val className = ctx?.class_name()?.text
-            logger.debug( "Entering class declaration: $className")
+            logger.debug( "Entering class declaration: $className", Throwable())
 
             className?.let { newClass->
                 currentType = Type(newClass, "", TypeType.Class).also { nuType->
@@ -78,18 +79,39 @@ class SwiftParsingInteractor() {
             }
         }
 
-        override fun enterDeclaration(ctx: Swift5Parser.DeclarationContext?) {
-            super.enterDeclaration(ctx)
+        override fun enterClass_member(ctx: Swift5Parser.Class_memberContext?) {
+            super.enterClass_member(ctx)
 
-            logger.debug("Entering declaration: ${ctx?.text}")
+            logger.debug("Entering class member: ${ctx?.text}")
 
-            types.lastOrNull()?.let { currentType ->
+            NDC.push(ctx?.text ?: "Unknown")
 
+            //  Now to try to handle the member
+            handleClassMember(ctx)
+        }
 
+        fun handleClassMember(ctx: Swift5Parser.Class_memberContext?) {
+            ctx?.let { memberCtx ->
+                val memberText = memberCtx.text
+                logger.debug("Handling class member: $memberText")
 
-            } ?: run {
-                logger.warn("No current type found for declaration: ${ctx?.text}")
+                // Extract method or property from the member context
+                if (memberText.startsWith("func")) {
+                    val methodName = memberText.substringAfter("func").substringBefore("(").trim()
+                    currentType?.addMethod(Method(methodName, "Void")) // Default return type
+                    logger.debug("Extracted method: $methodName for type: ${currentType?.name}")
+                } else if (memberText.startsWith("var") || memberText.startsWith("let")) {
+                    val fieldName = memberText.substringAfter("var").substringBefore(":").trim()
+                    val visibility = extractVisibilityFromText(memberText)
+                    currentType?.addField(Field(fieldName, "Swift", visibility)) // Default type
+                    logger.debug("Extracted property: $fieldName for type: ${currentType?.name}")
+                }
             }
+        }
+
+        override fun exitClass_member(ctx: Swift5Parser.Class_memberContext?) {
+            super.exitClass_member(ctx)
+            NDC.pop()
         }
 
         // Generic approach to handle all declarations by looking for specific patterns in text
