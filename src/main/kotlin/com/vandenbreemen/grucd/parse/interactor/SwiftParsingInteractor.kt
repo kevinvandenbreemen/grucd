@@ -78,6 +78,20 @@ class SwiftParsingInteractor() {
             }
         }
 
+        override fun enterDeclaration(ctx: Swift5Parser.DeclarationContext?) {
+            super.enterDeclaration(ctx)
+
+            logger.debug("Entering declaration: ${ctx?.text}")
+
+            types.lastOrNull()?.let { currentType ->
+
+
+
+            } ?: run {
+                logger.warn("No current type found for declaration: ${ctx?.text}")
+            }
+        }
+
         // Generic approach to handle all declarations by looking for specific patterns in text
         override fun enterEveryRule(ctx: ParserRuleContext?) {
             ctx?.let { context ->
