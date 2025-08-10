@@ -102,8 +102,12 @@ class SwiftParsingInteractor() {
                     logger.debug("Extracted method: $methodName for type: ${currentType?.name}")
                 } else if (memberText.startsWith("var") || memberText.startsWith("let")) {
                     val fieldName = memberText.substringAfter("var").substringBefore(":").trim()
+
+                    val typeName = memberText.substringAfter(":").substringBefore("=").trim()
+                    logger.debug("Extracted field type: $typeName for field: $fieldName")
+
                     val visibility = extractVisibilityFromText(memberText)
-                    currentType?.addField(Field(fieldName, "Swift", visibility)) // Default type
+                    currentType?.addField(Field(fieldName, typeName, visibility))
                     logger.debug("Extracted property: $fieldName for type: ${currentType?.name}")
                 }
             }
@@ -221,7 +225,7 @@ class SwiftParsingInteractor() {
                 text.contains("internal") -> Visibility.Private // Map internal to Private
                 text.contains("public") -> Visibility.Public
                 text.contains("open") -> Visibility.Public
-                else -> Visibility.Private // Swift default is internal, map to Private
+                else -> Visibility.Internal // Swift default is internal, map to Private
             }
         }
     }

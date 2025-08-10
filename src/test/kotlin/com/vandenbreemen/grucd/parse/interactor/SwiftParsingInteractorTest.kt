@@ -36,7 +36,7 @@ class SwiftParsingInteractorTest {
         assertTrue(result.any { it.name == "Car" })
         val carType = result.first { it.name == "Car" }
         assertTrue(carType.fields.isNotEmpty())
-        assertTrue(carType.fields.any { it.name == "make" && it.visibility == Visibility.Public })
+        assertTrue(carType.fields.any { it.name == "make" && it.visibility == Visibility.Internal })
     }
 
 
