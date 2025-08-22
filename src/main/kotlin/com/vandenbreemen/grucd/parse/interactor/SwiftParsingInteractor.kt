@@ -71,7 +71,7 @@ class SwiftParsingInteractor() {
 			logger.debug( "Entering class declaration: $className", Throwable())
 
 			className?.let { newClass->
-				currentType = Type(newClass, "", TypeType.Class).also { nuType->
+				currentType = Type(newClass, extractPackageName(), TypeType.Class).also { nuType->
 					types.add(nuType)
 				}
 
@@ -86,12 +86,36 @@ class SwiftParsingInteractor() {
 
 			NDC.push(ctx?.text ?: "Unknown")
 
-			//  Now to try to handle the member
+			//  Handle only the top-level member text; do not scan entire class body
 			handleMemberText(ctx?.text)
 		}
 
 		override fun exitClass_member(ctx: Swift5Parser.Class_memberContext?) {
 			super.exitClass_member(ctx)
+			NDC.pop()
+		}
+
+		// --- Struct-specific handling ---
+		override fun enterStruct_declaration(ctx: Swift5Parser.Struct_declarationContext?) {
+			super.enterStruct_declaration(ctx)
+			val structName = ctx?.struct_name()?.text
+			logger.debug("Entering struct declaration: $structName")
+			structName?.let { name->
+				currentType = Type(name, extractPackageName(), TypeType.Struct).also { nuType->
+					types.add(nuType)
+				}
+			}
+		}
+
+		override fun enterStruct_member(ctx: Swift5Parser.Struct_memberContext?) {
+			super.enterStruct_member(ctx)
+			logger.debug("Entering struct member: ${ctx?.text}")
+			NDC.push(ctx?.text ?: "Unknown")
+			handleMemberText(ctx?.text)
+		}
+
+		override fun exitStruct_member(ctx: Swift5Parser.Struct_memberContext?) {
+			super.exitStruct_member(ctx)
 			NDC.pop()
 		}
 
@@ -119,74 +143,7 @@ class SwiftParsingInteractor() {
 			NDC.pop()
 		}
 
-		// Generic approach to handle all declarations by looking for specific patterns in text
-		override fun enterEveryRule(ctx: ParserRuleContext?) {
-			ctx?.let { context ->
-				val text = context.text
-				val contextName = context.javaClass.simpleName
-
-				// Handle class declarations
-				if (contextName.contains("Class_declarationContext") || text.matches(Regex(".*class\\s+\\w+.*"))) {
-					handleClassDeclaration(context)
-				}
-				// Handle struct declarations
-				else if (contextName.contains("Struct_declarationContext") || text.matches(Regex(".*struct\\s+\\w+.*"))) {
-					handleStructDeclaration(context)
-				}
-				// Handle protocol declarations
-				else if (contextName.contains("Protocol_declarationContext") || text.matches(Regex(".*protocol\\s+\\w+.*"))) {
-					handleProtocolDeclaration(context)
-				}
-				// Handle enum declarations
-				else if (contextName.contains("Enum_declarationContext") || text.matches(Regex(".*enum\\s+\\w+.*"))) {
-					handleEnumDeclaration(context)
-				}
-			}
-		}
-
-		private fun handleClassDeclaration(ctx: ParserRuleContext) {
-			val className = extractTypeNameFromText(ctx.text, "class")
-			if (className != null) {
-				logger.debug("Found class: $className")
-
-				val type = Type(className, extractPackageName(), TypeType.Class)
-				extractMembersFromText(ctx.text, type)
-				types.add(type)
-			}
-		}
-
-		private fun handleStructDeclaration(ctx: ParserRuleContext) {
-			val structName = extractTypeNameFromText(ctx.text, "struct")
-			if (structName != null) {
-				logger.debug("Found struct: $structName")
-
-				val type = Type(structName, extractPackageName(), TypeType.Struct) // Treat struct distinctly
-				extractMembersFromText(ctx.text, type)
-				types.add(type)
-			}
-		}
-
-		private fun handleProtocolDeclaration(ctx: ParserRuleContext) {
-			val protocolName = extractTypeNameFromText(ctx.text, "protocol")
-			if (protocolName != null) {
-				logger.debug("Found protocol: $protocolName")
-
-				val type = Type(protocolName, extractPackageName(), TypeType.Interface)
-				extractMembersFromText(ctx.text, type)
-				types.add(type)
-			}
-		}
-
-		private fun handleEnumDeclaration(ctx: ParserRuleContext) {
-			val enumName = extractTypeNameFromText(ctx.text, "enum")
-			if (enumName != null) {
-				logger.debug("Found enum: $enumName")
-
-				val type = Type(enumName, extractPackageName(), TypeType.Enum)
-				extractMembersFromText(ctx.text, type)
-				types.add(type)
-			}
-		}
+		// Remove generic enterEveryRule scanning to avoid collecting local variables as fields
 
 		private fun extractTypeNameFromText(text: String, keyword: String): String? {
 			val pattern = Regex("$keyword\\s*(\\w+)")
@@ -196,16 +153,16 @@ class SwiftParsingInteractor() {
 
 		private fun extractPackageName(): String {
 			// For Swift, we'll use the file path as a simple package representation
-			return File(filePath).parent ?: ""
+			return java.io.File(filePath).parent ?: ""
 		}
 
 		private fun handleMemberText(memberText: String?) {
 			memberText ?: return
 			logger.debug("Handling member: $memberText")
 
-			// Normalize by stripping whitespace to make parsing resilient to ANTLR compaction
 			val compact = memberText.replace("\\s+".toRegex(), "")
 
+			// If this is a function member, record method and stop; do not parse inside function body
 			if (compact.startsWith("func")) {
 				val afterFunc = compact.substringAfter("func")
 				val methodName = afterFunc.takeWhile { it.isLetterOrDigit() || it == '_' }
@@ -216,69 +173,45 @@ class SwiftParsingInteractor() {
 				return
 			}
 
-			// Handle properties declared with var/let, possibly with modifiers like 'lazy'
+			// Handle properties declared with var/let at member level
 			val varIndex = compact.indexOf("var")
 			val letIndex = compact.indexOf("let")
 			val keywordIndex = listOf(varIndex, letIndex).filter { it >= 0 }.minOrNull() ?: -1
 			if (keywordIndex >= 0) {
-				val afterKeyword = compact.substring(keywordIndex + if (keywordIndex == varIndex) 3 else 3)
+				val afterKeyword = compact.substring(keywordIndex + 3)
 				// Extract field name: first identifier after var/let
 				val name = afterKeyword.takeWhile { it.isLetterOrDigit() || it == '_' }
 				if (name.isBlank()) return
 
-				// Determine visibility from original text
 				val visibility = extractVisibilityFromText(memberText)
 
 				var typeName: String? = null
 				// Case 1: explicit type annotation, e.g., var x: Type
 				if (afterKeyword.contains(":")) {
 					val afterColon = afterKeyword.substringAfter(":")
-					// Type name until '=' or '{' or '(' for function types; keep brackets for arrays
-					typeName = afterColon.takeWhile { it != '=' && it != '{' && it != ';' }
-					// Trim trailing initialization if present
-					typeName = typeName.trimEnd()
+					typeName = afterColon.takeWhile { it != '=' && it != '{' && it != ';' }.trimEnd()
 				}
 
 				// Case 2: inferred from initializer, e.g., var x=TypeName(...)
 				if (typeName.isNullOrBlank() && afterKeyword.contains("=")) {
 					val rhs = afterKeyword.substringAfter("=")
-					// Capture constructor call TypeName(...)
 					val ctorType = rhs.takeWhile { it.isLetterOrDigit() || it == '_' || it == '.' }
 					if (ctorType.isNotBlank()) {
-						// For qualified names like Module.Type use last segment
 						typeName = ctorType.substringAfterLast('.')
 					}
 				}
 
-				// Fallback
 				if (typeName.isNullOrBlank()) {
 					typeName = "Swift"
 				}
 
-				currentType?.addField(Field(name, typeName!!, visibility))
+				currentType?.addField(Field(name, typeName, visibility))
 				logger.debug("Extracted property: $name : $typeName for type: ${currentType?.name}")
 			}
 		}
 
 		private fun extractMembersFromText(text: String, type: Type) {
-			// Extract methods
-			val funcPattern = Regex("func\\s*(\\w+)")
-			funcPattern.findAll(text).forEach { match ->
-				val methodName = match.groupValues[1]
-				val method = Method(methodName, "Void") // Default return type
-				type.addMethod(method)
-				logger.debug("Extracted method: $methodName for type: ${type.name}")
-			}
-
-			// Extract properties
-			val varPattern = Regex("(?:var|let)\\s*(\\w+)")
-			varPattern.findAll(text).forEach { match ->
-				val fieldName = match.groupValues[1]
-				val visibility = extractVisibilityFromText(text)
-				val field = Field(fieldName, "Swift", visibility) // Default type
-				type.addField(field)
-				logger.debug("Extracted property: $fieldName for type: ${type.name}")
-			}
+			// Deprecated: avoid scanning entire declaration to prevent collecting locals
 		}
 
 		private fun extractVisibilityFromText(text: String): Visibility {

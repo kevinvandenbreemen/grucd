@@ -92,4 +92,22 @@ class SwiftParsingInteractorTest {
         )
     }
 
+    @Test
+    fun `should not parse local variables as fields in swift`() {
+        val parser = SwiftParsingInteractor()
+        val result = parser.parse(
+            "src/test/resources/swift/FieldOfUnknownTypeExample/SwiftFileWithFieldOfUnknownType.swift"
+        )
+
+        logger.info("Result: $result")
+
+        assertTrue(result.any { it.name == "Square" && it.type == TypeType.Struct })
+        val square = result.first { it.name == "Square" }
+
+        // Only the struct property should be present
+        assertTrue(square.fields.any { it.name == "size" })
+        assertTrue(square.fields.none { it.name == "line" })
+        assertTrue(square.fields.none { it.name == "result" })
+    }
+
 }
