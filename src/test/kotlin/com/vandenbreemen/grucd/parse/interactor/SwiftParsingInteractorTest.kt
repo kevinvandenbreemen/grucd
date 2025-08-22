@@ -56,5 +56,20 @@ class SwiftParsingInteractorTest {
         assertTrue(proto.fields.any { it.name == "make" })
     }
 
+    @Test
+    fun `should parse a swift struct`() {
+        val parser = SwiftParsingInteractor()
+        val result = parser.parse(
+            "src/test/resources/swift/StructExample/Person.swift"
+        )
+
+        logger.info("Result: $result")
+
+        assertTrue(result.any { it.name == "Person" })
+        val person = result.first { it.name == "Person" }
+        assertEquals(TypeType.Struct, person.type)
+        assertTrue(person.fields.any { it.name == "fullName" })
+    }
+
 
 }

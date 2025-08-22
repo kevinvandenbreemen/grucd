@@ -160,7 +160,7 @@ class SwiftParsingInteractor() {
 			if (structName != null) {
 				logger.debug("Found struct: $structName")
 
-				val type = Type(structName, extractPackageName(), TypeType.Class) // Treat struct as class
+				val type = Type(structName, extractPackageName(), TypeType.Struct) // Treat struct distinctly
 				extractMembersFromText(ctx.text, type)
 				types.add(type)
 			}
