@@ -156,4 +156,21 @@ class SourceCodeExtractorTest {
         file.writeText(fakeCode)
     }
 
+    @Test
+    fun `should include Swift files when building model`() {
+        val extractor = SourceCodeExtractor()
+        val fileNames = extractor.getFilenamesToVisit(inputFile = null, inputDir = "src/test/resources/swift")
+
+        // Ensure .swift files are detected
+        fileNames.shouldNotBeEmpty()
+        assert(fileNames.any { it.endsWith(".swift") })
+
+        val model = extractor.buildModelWithFiles(fileNames)
+
+        // Ensure Swift types are parsed into the model
+        model.typesWithName("Car").shouldNotBeEmpty()
+        model.typesWithName("Drivable").shouldNotBeEmpty()
+        model.typesWithName("Person").shouldNotBeEmpty()
+    }
+
 }

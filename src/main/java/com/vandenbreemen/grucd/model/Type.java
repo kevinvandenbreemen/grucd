@@ -51,6 +51,7 @@ public class Type {
         this.superTypeNames = new ArrayList<>();
         this.interfaceNames = new ArrayList<>();
         this.annotations = new ArrayList<>();
+        this.imports = new ArrayList<>(); // Initialize to avoid null
     }
 
     public Type(String name, String pkg) {
