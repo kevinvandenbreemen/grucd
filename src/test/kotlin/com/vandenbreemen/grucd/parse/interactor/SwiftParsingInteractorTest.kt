@@ -2,6 +2,8 @@ package com.vandenbreemen.grucd.parse.interactor
 
 import com.vandenbreemen.grucd.model.Visibility
 import com.vandenbreemen.grucd.model.TypeType
+import org.amshove.kluent.should
+import org.amshove.kluent.shouldBeEqualTo
 import org.amshove.kluent.shouldNotBeEmpty
 import org.apache.log4j.Logger
 import org.junit.jupiter.api.Assertions.*
@@ -108,6 +110,29 @@ class SwiftParsingInteractorTest {
         assertTrue(square.fields.any { it.name == "size" })
         assertTrue(square.fields.none { it.name == "line" })
         assertTrue(square.fields.none { it.name == "result" })
+    }
+
+    @Test
+    fun `should ignore typealias declarations in swift`() {
+        val parser = SwiftParsingInteractor()
+        val result = parser.parse(
+            "src/test/resources/swift/TypeAliasExamples/TypeAliases.swift"
+        )
+
+        logger.info("Result: $result")
+
+        // Should not include the typealias as a type
+        assertFalse(result.any { it.name == "FetchUserCompletion" })
+
+        // Should still parse the class that uses the typealias
+        assertTrue(result.any { it.name == "SomethingWithAliasesStrategy" })
+
+        //  Validate the fields in the class
+        result.first { it.name == "SomethingWithAliasesStrategy" }.run {
+            fields.size shouldBeEqualTo 1
+            fields[0].name shouldBeEqualTo "someField"
+            fields[0].typeName shouldBeEqualTo "SomeType"
+        }
     }
 
 }

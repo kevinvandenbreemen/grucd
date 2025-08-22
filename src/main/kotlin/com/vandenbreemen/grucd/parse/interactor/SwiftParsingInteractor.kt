@@ -162,6 +162,12 @@ class SwiftParsingInteractor() {
 
 			val compact = memberText.replace("\\s+".toRegex(), "")
 
+			// Ignore typealias declarations
+			if (compact.startsWith("typealias")) {
+				logger.debug("Ignoring typealias member:  raw=$compact")
+				return
+			}
+
 			// If this is a function member, record method and stop; do not parse inside function body
 			if (compact.startsWith("func")) {
 				val afterFunc = compact.substringAfter("func")
