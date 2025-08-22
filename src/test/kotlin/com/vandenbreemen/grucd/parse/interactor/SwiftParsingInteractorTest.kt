@@ -71,5 +71,25 @@ class SwiftParsingInteractorTest {
         assertTrue(person.fields.any { it.name == "fullName" })
     }
 
+    @Test
+    fun `should detect class reference via field initializer`() {
+        val parser = SwiftParsingInteractor()
+        val result = parser.parse(
+            "src/test/resources/swift/TypeReferencingExamples/DataImporter.swift"
+        )
+
+        logger.info("Result: $result")
+
+        // Both classes should be discovered
+        assertTrue(result.any { it.name == "DataImporter" })
+        assertTrue(result.any { it.name == "DataManager" })
+
+        // DataManager should have a field `importer` of type DataImporter
+        val dataManagerTypes = result.filter { it.name == "DataManager" }
+        assertTrue(
+            dataManagerTypes.any { t -> t.fields.any { f -> f.name == "importer" && f.typeName == "DataImporter" } },
+            "Expected DataManager to have a field 'importer' of type 'DataImporter'"
+        )
+    }
 
 }

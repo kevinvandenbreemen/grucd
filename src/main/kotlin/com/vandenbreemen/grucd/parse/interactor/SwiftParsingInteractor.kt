@@ -202,17 +202,61 @@ class SwiftParsingInteractor() {
 		private fun handleMemberText(memberText: String?) {
 			memberText ?: return
 			logger.debug("Handling member: $memberText")
-			if (memberText.startsWith("func")) {
-				val methodName = memberText.substringAfter("func").substringBefore("(").trim()
-				currentType?.addMethod(Method(methodName, "Void"))
-				logger.debug("Extracted method: $methodName for type: ${currentType?.name}")
-			} else if (memberText.startsWith("var") || memberText.startsWith("let")) {
-				val afterVar = memberText.substringAfter("var").substringBefore(":")
-				val fieldName = if (afterVar.isNotBlank()) afterVar.trim() else memberText.substringAfter("let").substringBefore(":").trim()
-				val typeName = memberText.substringAfter(":").substringBefore("=").trim()
+
+			// Normalize by stripping whitespace to make parsing resilient to ANTLR compaction
+			val compact = memberText.replace("\\s+".toRegex(), "")
+
+			if (compact.startsWith("func")) {
+				val afterFunc = compact.substringAfter("func")
+				val methodName = afterFunc.takeWhile { it.isLetterOrDigit() || it == '_' }
+				if (methodName.isNotBlank()) {
+					currentType?.addMethod(Method(methodName, "Void"))
+					logger.debug("Extracted method: $methodName for type: ${currentType?.name}")
+				}
+				return
+			}
+
+			// Handle properties declared with var/let, possibly with modifiers like 'lazy'
+			val varIndex = compact.indexOf("var")
+			val letIndex = compact.indexOf("let")
+			val keywordIndex = listOf(varIndex, letIndex).filter { it >= 0 }.minOrNull() ?: -1
+			if (keywordIndex >= 0) {
+				val afterKeyword = compact.substring(keywordIndex + if (keywordIndex == varIndex) 3 else 3)
+				// Extract field name: first identifier after var/let
+				val name = afterKeyword.takeWhile { it.isLetterOrDigit() || it == '_' }
+				if (name.isBlank()) return
+
+				// Determine visibility from original text
 				val visibility = extractVisibilityFromText(memberText)
-				currentType?.addField(Field(fieldName, typeName, visibility))
-				logger.debug("Extracted property: $fieldName for type: ${currentType?.name}")
+
+				var typeName: String? = null
+				// Case 1: explicit type annotation, e.g., var x: Type
+				if (afterKeyword.contains(":")) {
+					val afterColon = afterKeyword.substringAfter(":")
+					// Type name until '=' or '{' or '(' for function types; keep brackets for arrays
+					typeName = afterColon.takeWhile { it != '=' && it != '{' && it != ';' }
+					// Trim trailing initialization if present
+					typeName = typeName.trimEnd()
+				}
+
+				// Case 2: inferred from initializer, e.g., var x=TypeName(...)
+				if (typeName.isNullOrBlank() && afterKeyword.contains("=")) {
+					val rhs = afterKeyword.substringAfter("=")
+					// Capture constructor call TypeName(...)
+					val ctorType = rhs.takeWhile { it.isLetterOrDigit() || it == '_' || it == '.' }
+					if (ctorType.isNotBlank()) {
+						// For qualified names like Module.Type use last segment
+						typeName = ctorType.substringAfterLast('.')
+					}
+				}
+
+				// Fallback
+				if (typeName.isNullOrBlank()) {
+					typeName = "Swift"
+				}
+
+				currentType?.addField(Field(name, typeName!!, visibility))
+				logger.debug("Extracted property: $name : $typeName for type: ${currentType?.name}")
 			}
 		}
 
