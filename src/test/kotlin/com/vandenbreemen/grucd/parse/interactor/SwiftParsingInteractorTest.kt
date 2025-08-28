@@ -149,6 +149,7 @@ class SwiftParsingInteractorTest {
 
         // Drawable should be an interface and include methods from the protocol and its extension
         assertTrue(result.any { it.name == "Drawable" && it.type == TypeType.Interface })
+        result.filter { it.name == "Drawable" }.size shouldBeEqualTo 1
         val drawable = result.first { it.name == "Drawable" }
         assertTrue(drawable.methods.any { it.name == "draw" }, "Expected protocol method 'draw'")
         assertTrue(drawable.methods.any { it.name == "describe" }, "Expected extension method 'describe'")
