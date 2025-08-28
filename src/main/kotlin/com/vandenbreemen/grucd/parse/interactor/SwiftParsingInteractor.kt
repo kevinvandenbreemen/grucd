@@ -65,14 +65,20 @@ class SwiftParsingInteractor() {
 				} else {
 					// If existing is a placeholder Class but new is a concrete kind (Struct/Interface), replace and merge
 					if (existing.type == TypeType.Class && t.type != TypeType.Class) {
-						// Move members from existing into new concrete type
+						// Move members and relations from existing into new concrete type
 						t.fields.addAll(existing.fields)
 						t.methods.addAll(existing.methods)
+						// Merge interface and super types
+						existing.interfaceNames.forEach { if (!t.interfaceNames.contains(it)) t.addInterface(it) }
+						existing.superTypeNames.forEach { if (!t.superTypeNames.contains(it)) t.addSuperType(it) }
 						byName[t.name] = t
 					} else {
 						// Merge methods and fields into the existing type
 						existing.fields.addAll(t.fields)
 						existing.methods.addAll(t.methods)
+						// Merge interface and super types
+						t.interfaceNames.forEach { if (!existing.interfaceNames.contains(it)) existing.addInterface(it) }
+						t.superTypeNames.forEach { if (!existing.superTypeNames.contains(it)) existing.addSuperType(it) }
 					}
 				}
 			}
@@ -112,6 +118,14 @@ class SwiftParsingInteractor() {
 				}
 
 				logger.debug("Added class type: $newClass")
+				// Capture inheritance clause: superclass and protocols
+				ctx?.type_inheritance_clause()?.let { clause ->
+					val names = parseInheritanceList(clause.text)
+					if (names.isNotEmpty()) {
+						currentType?.addSuperType(names.first())
+						names.drop(1).forEach { n -> currentType?.addInterface(n) }
+					}
+				}
 			}
 		}
 
@@ -145,6 +159,11 @@ class SwiftParsingInteractor() {
 						types.add(nuType)
 					}
 				}
+			}
+			// Capture protocol conformances on structs
+			ctx?.type_inheritance_clause()?.let { clause ->
+				val names = parseInheritanceList(clause.text)
+				names.forEach { n -> currentType?.addInterface(n) }
 			}
 		}
 
@@ -198,6 +217,10 @@ class SwiftParsingInteractor() {
 			// Save current and switch to the target type (create placeholder if not found in this file)
 			typeContextStack.addLast(currentType)
 			currentType = targetName?.let { findOrCreateType(it) }
+			// Capture protocol conformances added via the extension
+			ctx?.type_inheritance_clause()?.let { clause ->
+				parseInheritanceList(clause.text).forEach { n -> currentType?.addInterface(n) }
+			}
 		}
 
 		override fun exitExtension_declaration(ctx: Swift5Parser.Extension_declarationContext?) {
@@ -218,6 +241,16 @@ class SwiftParsingInteractor() {
 			NDC.pop()
 		}
 
+		override fun enterExtension_members(ctx: Swift5Parser.Extension_membersContext?) {
+			// Before members, capture any protocol conformances declared on the extension itself
+			super.enterExtension_members(ctx)
+		}
+
+		override fun enterExtension_body(ctx: Swift5Parser.Extension_bodyContext?) {
+			super.enterExtension_body(ctx)
+			// type_inheritance_clause is on the declaration; capture there
+		}
+
 		// Remove generic enterEveryRule scanning to avoid collecting local variables as fields
 
 		private fun extractTypeNameFromText(text: String, keyword: String): String? {
@@ -228,7 +261,14 @@ class SwiftParsingInteractor() {
 
 		private fun extractPackageName(): String {
 			// For Swift, we'll use the file path as a simple package representation
-			return java.io.File(filePath).parent ?: ""
+			return File(filePath).parent ?: ""
+		}
+
+		private fun parseInheritanceList(text: String): List<String> {
+			// text is like ": A, B" possibly with spaces; we just split by ',' after ':'
+			val afterColon = text.substringAfter(':', missingDelimiterValue = "")
+			if (afterColon.isBlank()) return emptyList()
+			return afterColon.split(',').map { it.trim() }.filter { it.isNotEmpty() }
 		}
 
 		private fun findOrCreateType(name: String): Type {
