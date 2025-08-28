@@ -168,7 +168,7 @@ class SwiftParsingInteractorTest {
         logger.info("Result: $result")
 
         // Circle should be a struct and include fields/methods from the struct and its extension
-        assertTrue(result.any { it.name == "Circle" && it.type == TypeType.Struct })
+        assertTrue(result.filter { it.name == "Circle" && it.type == TypeType.Struct }.size == 1)
         val circle = result.first { it.name == "Circle" }
 
         // Original fields
