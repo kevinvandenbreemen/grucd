@@ -52,11 +52,41 @@ class SwiftParsingInteractor() {
 	}
 
 	/**
+	 * Parse multiple Swift source files and merge types by name so that extensions declared in
+	 * separate files are applied to the same Type.
+	 */
+	fun parse(filePaths: List<String>): List<Type> {
+		val byName = linkedMapOf<String, Type>()
+		filePaths.forEach { path ->
+			parse(path).forEach { t ->
+				val existing = byName[t.name]
+				if (existing == null) {
+					byName[t.name] = t
+				} else {
+					// If existing is a placeholder Class but new is a concrete kind (Struct/Interface), replace and merge
+					if (existing.type == TypeType.Class && t.type != TypeType.Class) {
+						// Move members from existing into new concrete type
+						t.fields.addAll(existing.fields)
+						t.methods.addAll(existing.methods)
+						byName[t.name] = t
+					} else {
+						// Merge methods and fields into the existing type
+						existing.fields.addAll(t.fields)
+						existing.methods.addAll(t.methods)
+					}
+				}
+			}
+		}
+		return byName.values.toList()
+	}
+
+	/**
 	 * Listener class to extract Type information from Swift parse tree
 	 */
 	private class SwiftTypeVisitor(private val filePath: String) : Swift5ParserBaseListener() {
 
 		private var currentType: Type? = null
+		private val typeContextStack = ArrayDeque<Type?>()
 
 		private val types = mutableListOf<Type>()
 		private val logger: Logger = Logger.getLogger(SwiftTypeVisitor::class.java)
@@ -71,8 +101,14 @@ class SwiftParsingInteractor() {
 			logger.debug( "Entering class declaration: $className", Throwable())
 
 			className?.let { newClass->
-				currentType = Type(newClass, extractPackageName(), TypeType.Class).also { nuType->
-					types.add(nuType)
+				// Reuse placeholder created by an earlier extension if present
+				val existing = types.find { it.name == newClass }
+				if (existing != null) {
+					currentType = existing
+				} else {
+					currentType = Type(newClass, extractPackageName(), TypeType.Class).also { nuType->
+						types.add(nuType)
+					}
 				}
 
 				logger.debug("Added class type: $newClass")
@@ -101,8 +137,13 @@ class SwiftParsingInteractor() {
 			val structName = ctx?.struct_name()?.text
 			logger.debug("Entering struct declaration: $structName")
 			structName?.let { name->
-				currentType = Type(name, extractPackageName(), TypeType.Struct).also { nuType->
-					types.add(nuType)
+				val existing = types.find { it.name == name }
+				if (existing != null) {
+					currentType = existing
+				} else {
+					currentType = Type(name, extractPackageName(), TypeType.Struct).also { nuType->
+						types.add(nuType)
+					}
 				}
 			}
 		}
@@ -125,8 +166,13 @@ class SwiftParsingInteractor() {
 			val protocolName = ctx?.protocol_name()?.text
 			logger.debug("Entering protocol declaration: $protocolName")
 			protocolName?.let { name->
-				currentType = Type(name, extractPackageName(), TypeType.Interface).also { nuType->
-					types.add(nuType)
+				val existing = types.find { it.name == name }
+				if (existing != null) {
+					currentType = existing
+				} else {
+					currentType = Type(name, extractPackageName(), TypeType.Interface).also { nuType->
+						types.add(nuType)
+					}
 				}
 			}
 		}
@@ -143,6 +189,35 @@ class SwiftParsingInteractor() {
 			NDC.pop()
 		}
 
+		// --- Extension handling ---
+		override fun enterExtension_declaration(ctx: Swift5Parser.Extension_declarationContext?) {
+			super.enterExtension_declaration(ctx)
+			val targetNameRaw = ctx?.type_identifier()?.text
+			val targetName = targetNameRaw?.substringAfterLast(".")
+			logger.debug("Entering extension for: $targetName")
+			// Save current and switch to the target type (create placeholder if not found in this file)
+			typeContextStack.addLast(currentType)
+			currentType = targetName?.let { findOrCreateType(it) }
+		}
+
+		override fun exitExtension_declaration(ctx: Swift5Parser.Extension_declarationContext?) {
+			super.exitExtension_declaration(ctx)
+			// Restore previous type context
+			currentType = if (typeContextStack.isNotEmpty()) typeContextStack.removeLast() else null
+		}
+
+		override fun enterExtension_member(ctx: Swift5Parser.Extension_memberContext?) {
+			super.enterExtension_member(ctx)
+			logger.debug("Entering extension member: ${ctx?.text}")
+			NDC.push(ctx?.text ?: "Unknown")
+			handleMemberText(ctx?.text)
+		}
+
+		override fun exitExtension_member(ctx: Swift5Parser.Extension_memberContext?) {
+			super.exitExtension_member(ctx)
+			NDC.pop()
+		}
+
 		// Remove generic enterEveryRule scanning to avoid collecting local variables as fields
 
 		private fun extractTypeNameFromText(text: String, keyword: String): String? {
@@ -154,6 +229,17 @@ class SwiftParsingInteractor() {
 		private fun extractPackageName(): String {
 			// For Swift, we'll use the file path as a simple package representation
 			return java.io.File(filePath).parent ?: ""
+		}
+
+		private fun findOrCreateType(name: String): Type {
+			// Look for an existing type declared earlier in this file
+			val existing = types.find { it.name == name }
+			if (existing != null) return existing
+			// Create a placeholder type so that extension members from standalone files are captured
+			val placeholder = Type(name, extractPackageName(), TypeType.Class)
+			types.add(placeholder)
+			logger.debug("Created placeholder type for extension target: $name")
+			return placeholder
 		}
 
 		private fun handleMemberText(memberText: String?) {
@@ -168,9 +254,10 @@ class SwiftParsingInteractor() {
 				return
 			}
 
-			// If this is a function member, record method and stop; do not parse inside function body
-			if (compact.startsWith("func")) {
-				val afterFunc = compact.substringAfter("func")
+			// If this contains a function member (e.g., `func` or `mutating func`), record method and stop
+			val funcIndex = compact.indexOf("func")
+			if (funcIndex >= 0) {
+				val afterFunc = compact.substring(funcIndex + 4)
 				val methodName = afterFunc.takeWhile { it.isLetterOrDigit() || it == '_' }
 				if (methodName.isNotBlank()) {
 					currentType?.addMethod(Method(methodName, "Void"))

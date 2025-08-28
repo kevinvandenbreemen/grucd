@@ -135,4 +135,51 @@ class SwiftParsingInteractorTest {
         }
     }
 
+    @Test
+    fun `should merge protocol extension members into protocol`() {
+        val parser = SwiftParsingInteractor()
+        val files = listOf(
+            "src/test/resources/swift/TypeAndExtension/DrawableExtension.swift",
+            "src/test/resources/swift/TypeAndExtension/CircleExtension.swift",
+            "src/test/resources/swift/TypeAndExtension/SwiftTypeToBeExtended.swift"
+        )
+
+        val result = parser.parse(files)
+        logger.info("Result: $result")
+
+        // Drawable should be an interface and include methods from the protocol and its extension
+        assertTrue(result.any { it.name == "Drawable" && it.type == TypeType.Interface })
+        val drawable = result.first { it.name == "Drawable" }
+        assertTrue(drawable.methods.any { it.name == "draw" }, "Expected protocol method 'draw'")
+        assertTrue(drawable.methods.any { it.name == "describe" }, "Expected extension method 'describe'")
+    }
+
+    @Test
+    fun `should merge struct extension members into struct`() {
+        val parser = SwiftParsingInteractor()
+        val files = listOf(
+            "src/test/resources/swift/TypeAndExtension/CircleExtension.swift",
+            "src/test/resources/swift/TypeAndExtension/DrawableExtension.swift",
+            "src/test/resources/swift/TypeAndExtension/SwiftTypeToBeExtended.swift"
+        )
+
+        val result = parser.parse(files)
+        logger.info("Result: $result")
+
+        // Circle should be a struct and include fields/methods from the struct and its extension
+        assertTrue(result.any { it.name == "Circle" && it.type == TypeType.Struct })
+        val circle = result.first { it.name == "Circle" }
+
+        // Original fields
+        assertTrue(circle.fields.any { it.name == "color" })
+        assertTrue(circle.fields.any { it.name == "radius" })
+
+        // Extension computed property
+        assertTrue(circle.fields.any { it.name == "diameter" && it.typeName.contains("Double") })
+
+        // Extension methods
+        assertTrue(circle.methods.any { it.name == "area" })
+        assertTrue(circle.methods.any { it.name == "scale" })
+    }
+
 }
