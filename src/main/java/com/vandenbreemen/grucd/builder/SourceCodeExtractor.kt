@@ -116,6 +116,9 @@ class SourceCodeExtractor {
 
         val allTypes: MutableList<Type> = ArrayList<Type>()
 
+        // Collect Swift files to parse together (to merge extensions with base types)
+        val swiftFiles = mutableListOf<String>()
+
         filesToVisit.forEach { file ->
             val cachedTypes = fileChecksums?.get(file)
             val currentChecksum = calculateMd5(file)
@@ -127,20 +130,58 @@ class SourceCodeExtractor {
                 when {
                     file.endsWith(".java") -> java.parse(file) ?: emptyList()
                     file.endsWith(".kt") -> kotlin.parse(file)
-                    file.endsWith(".swift") -> swiftParser.parse(file)
+                    file.endsWith(".swift") -> {
+                        // Defer Swift parsing; just collect the file
+                        swiftFiles.add(file)
+                        emptyList()
+                    }
                     else -> emptyList()
                 }
             }
-            allTypes.addAll(parsedTypes)
+            if (!file.endsWith(".swift")) {
+                allTypes.addAll(parsedTypes)
+                fileChecksums?.let {
+                    if (it.containsKey(file)) {
+                        it[file] = it[file]!!.copy(types = parsedTypes, checksum = currentChecksum)
+                    } else {
+                        it[file] = FileAssociatedChecksumAndTypes(
+                            checksum = currentChecksum,
+                            types = parsedTypes.toMutableList()
+                        )
+                    }
+                }
+            }
+        }
 
-            fileChecksums?.let {
-                if (it.containsKey(file)) {
-                    it[file] = it[file]!!.copy(types = parsedTypes, checksum = currentChecksum)
-                } else {
-                    it[file] = FileAssociatedChecksumAndTypes(
-                        checksum = currentChecksum,
-                        types = parsedTypes.toMutableList()
-                    )
+        // Now handle Swift files in batch to merge extension members with base types
+        if (swiftFiles.isNotEmpty()) {
+            // Check cache status across all swift files
+            val swiftCachedConsistent = useCachedTypes && fileChecksums != null && swiftFiles.all { file ->
+                val entry = fileChecksums!![file]
+                entry != null && entry.checksum == calculateMd5(file)
+            }
+
+            val swiftTypes: List<Type> = if (swiftCachedConsistent) {
+                // Reuse cached types from the first swift file entry (they are identical merged set)
+                fileChecksums!![swiftFiles.first()]?.types ?: emptyList()
+            } else {
+                swiftParser.parse(swiftFiles)
+            }
+
+            allTypes.addAll(swiftTypes)
+
+            // Update cache entries for each swift file
+            fileChecksums?.let { cache ->
+                swiftFiles.forEach { file ->
+                    val checksum = calculateMd5(file)
+                    if (cache.containsKey(file)) {
+                        cache[file] = cache[file]!!.copy(types = swiftTypes, checksum = checksum)
+                    } else {
+                        cache[file] = FileAssociatedChecksumAndTypes(
+                            checksum = checksum,
+                            types = swiftTypes.toMutableList()
+                        )
+                    }
                 }
             }
         }
