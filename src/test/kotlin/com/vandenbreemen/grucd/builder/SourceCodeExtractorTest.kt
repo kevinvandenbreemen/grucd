@@ -173,4 +173,19 @@ class SourceCodeExtractorTest {
         model.typesWithName("Person").shouldNotBeEmpty()
     }
 
+    @Test
+    fun `should not register the same type twice when parsing multiple files`() {
+        val extractor = SourceCodeExtractor()
+
+        val directory = "src/test/resources/swift"
+
+        val fileNames = extractor.getFilenamesToVisit(inputFile = null, inputDir = directory)
+
+        val model = extractor.buildModelWithFiles(fileNames)
+
+        //  There should only be one Car type
+        model.types.filter { t->t.name == "Drawable" }.size shouldBeEqualTo 1
+
+    }
+
 }
