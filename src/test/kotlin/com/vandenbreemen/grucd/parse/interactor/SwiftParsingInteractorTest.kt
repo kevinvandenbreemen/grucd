@@ -181,6 +181,8 @@ class SwiftParsingInteractorTest {
         // Extension methods
         assertTrue(circle.methods.any { it.name == "area" })
         assertTrue(circle.methods.any { it.name == "scale" })
+
+        circle.interfaceNames.shouldNotBeEmpty()
     }
 
 }
