@@ -1,15 +1,16 @@
 package com.vandenbreemen.grucd.cache.interactor
 
 import com.vandenbreemen.grucd.cache.repository.ModelPreviouslyParsedRepository
+import com.vandenbreemen.grucd.model.Type
 import java.io.File
 import java.security.MessageDigest
 
 class ModelPreviouslyParsedInteractor(private val repository: ModelPreviouslyParsedRepository) {
     /**
-     * Returns the cached types for the given file path if the cache is valid (md5 matches).
+     * Returns the cached type for the given file path if the cache is valid (md5 matches).
      * If the cache is invalid, deletes the cache entry and returns null.
      */
-    fun getValidCachedTypesForFile(filePath: String): List<String>? {
+    fun getValidCachedTypeForFile(filePath: String): List<Type>? {
         val doc = repository.getDocumentByFilename(filePath) ?: return null
         val file = File(filePath)
         if (!file.exists()) {

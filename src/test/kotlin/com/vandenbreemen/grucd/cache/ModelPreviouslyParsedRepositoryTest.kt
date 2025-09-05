@@ -1,6 +1,7 @@
 package com.vandenbreemen.grucd.cache
 
 import com.vandenbreemen.grucd.cache.repository.ModelPreviouslyParsedRepository
+import com.vandenbreemen.grucd.model.Type
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -24,20 +25,10 @@ class ModelPreviouslyParsedRepositoryTest {
     }
 
     @Test
-    fun `store and retrieve multiple types by filename`() {
-        val types = listOf("TypeA", "TypeB", "TypeC")
+    fun `store and retrieve type by filename`() {
+        val types = listOf(Type("TypeA", "pkgA"), Type("TypeB", "pkgB"), Type("TypeC", "pkgC"))
         val filename = "file1.kt"
         val md5 = "abc123"
-        repo.store(types, filename, md5)
-        val result = repo.getTypesByFilename(filename)
-        assertEquals(types, result)
-    }
-
-    @Test
-    fun `store and retrieve single type by filename`() {
-        val types = listOf("MyType")
-        val filename = "file2.kt"
-        val md5 = "def456"
         repo.store(types, filename, md5)
         val result = repo.getTypesByFilename(filename)
         assertEquals(types, result)

@@ -1,6 +1,7 @@
 package com.vandenbreemen.grucd.cache.repository
 
 import com.vandenbreemen.grucd.cache.model.ParsedTypeDocument
+import com.vandenbreemen.grucd.model.Type
 import org.dizitart.no2.Nitrite
 import org.dizitart.no2.objects.ObjectRepository
 import org.dizitart.no2.objects.filters.ObjectFilters
@@ -11,12 +12,12 @@ class ModelPreviouslyParsedRepository {
         .openOrCreate()
     private val repository: ObjectRepository<ParsedTypeDocument> = db.getRepository(ParsedTypeDocument::class.java)
 
-    fun store(types: List<String>, filename: String, md5: String) {
+    fun store(types: List<Type>, filename: String, md5: String) {
         val doc = ParsedTypeDocument(filename, types, md5)
         repository.update(doc, true) // upsert
     }
 
-    fun getTypesByFilename(filename: String): List<String>? {
+    fun getTypesByFilename(filename: String): List<Type>? {
         val doc = repository.find(ObjectFilters.eq("filename", filename)).firstOrNull()
         return doc?.types
     }

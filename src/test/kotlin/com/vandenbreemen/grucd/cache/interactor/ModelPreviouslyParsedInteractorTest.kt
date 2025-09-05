@@ -1,6 +1,7 @@
 package com.vandenbreemen.grucd.cache.interactor
 
 import com.vandenbreemen.grucd.cache.repository.ModelPreviouslyParsedRepository
+import com.vandenbreemen.grucd.model.Type
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -41,35 +42,39 @@ class ModelPreviouslyParsedInteractorTest {
     }
 
     @Test
-    fun `returns cached type if md5 matches`() {
-        val types = listOf("MyType")
+    fun `returns cached types if md5 matches`() {
+        val types = listOf(Type("TypeA", "pkgA"), Type("TypeB", "pkgB"))
         val md5 = md5Of(testFile)
         repo.store(types, testFile.path, md5)
-        val result = interactor.getValidCachedTypesForFile(testFile.path)
+        val result = interactor.getValidCachedTypeForFile(testFile.path)
         assertEquals(types, result)
     }
 
     @Test
     fun `returns null and deletes cache if md5 does not match`() {
-        val types = listOf("MyType")
+        val types = listOf(Type("TypeA", "pkgA"), Type("TypeB", "pkgB"))
         val md5 = md5Of(testFile)
         repo.store(types, testFile.path, md5)
         testFile.writeText("changed content")
-        val result = interactor.getValidCachedTypesForFile(testFile.path)
+        val result = interactor.getValidCachedTypeForFile(testFile.path)
         assertNull(result)
         assertNull(repo.getDocumentByFilename(testFile.path))
     }
 
     @Test
     fun `returns null and deletes cache if file does not exist`() {
-        val types = listOf("MyType")
+        val types = listOf(Type("TypeA", "pkgA"), Type("TypeB", "pkgB"))
         val md5 = md5Of(testFile)
         repo.store(types, testFile.path, md5)
         testFile.delete()
-        val result = interactor.getValidCachedTypesForFile(testFile.path)
+        val result = interactor.getValidCachedTypeForFile(testFile.path)
         assertNull(result)
         assertNull(repo.getDocumentByFilename(testFile.path))
     }
+
+    @Test
+    fun `returns null for unknown filename`() {
+        val result = interactor.getValidCachedTypeForFile("nonexistent.kt")
+        assertNull(result)
+    }
 }
-
-
