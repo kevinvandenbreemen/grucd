@@ -1,5 +1,7 @@
 package com.vandenbreemen.grucd.builder
 
+import com.vandenbreemen.grucd.cache.interactor.ModelPreviouslyParsedInteractor
+import com.vandenbreemen.grucd.cache.repository.ModelPreviouslyParsedRepository
 import com.vandenbreemen.grucd.model.Model
 import com.vandenbreemen.grucd.model.Type
 import com.vandenbreemen.grucd.parse.ParseJava
@@ -11,6 +13,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.isDirectory
 
+@Deprecated("Going to be using ParsedTypeDocument and ModelPreviouslyParsedRepository instead")
 internal data class FileAssociatedChecksumAndTypes (
     val checksum: String,
     val types: List<Type>
@@ -35,7 +38,12 @@ class SourceCodeExtractor {
     /**
      * Mapping from file absolute path to its checksum.  This is used to detect changes in files
      */
+    @Deprecated("Please use cacheInteractor instead")
     private var fileChecksums: MutableMap<String, FileAssociatedChecksumAndTypes>? = null
+
+    private val cacheInteractor = ModelPreviouslyParsedInteractor(
+        ModelPreviouslyParsedRepository()
+    )
 
     /**
      * Adds the given annotation name to the list of annotations that will be filtered for.  Note that any non-annotated
