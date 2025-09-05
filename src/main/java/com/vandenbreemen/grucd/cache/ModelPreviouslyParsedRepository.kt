@@ -1,0 +1,26 @@
+package com.vandenbreemen.grucd.cache
+
+import com.vandenbreemen.grucd.cache.model.ParsedTypeDocument
+import org.dizitart.no2.Nitrite
+import org.dizitart.no2.objects.ObjectRepository
+
+class ModelPreviouslyParsedRepository {
+    private val db: Nitrite = Nitrite.builder()
+        .filePath("model-previously-parsed.db")
+        .openOrCreate()
+    private val repository: ObjectRepository<ParsedTypeDocument> = db.getRepository(ParsedTypeDocument::class.java)
+
+    fun store(type: String, filename: String, md5: String) {
+        val doc = ParsedTypeDocument(filename, type, md5)
+        repository.update(doc, true) // upsert
+    }
+
+    fun getTypeByFilename(filename: String): String? {
+        val doc = repository.getById(filename)
+        return doc?.type
+    }
+
+    fun close() {
+        db.close()
+    }
+}
