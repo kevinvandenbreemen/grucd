@@ -42,33 +42,34 @@ class ModelPreviouslyParsedInteractorTest {
 
     @Test
     fun `returns cached type if md5 matches`() {
-        val type = "MyType"
+        val types = listOf("MyType")
         val md5 = md5Of(testFile)
-        repo.store(type, testFile.path, md5)
-        val result = interactor.getValidCachedTypeForFile(testFile.path)
-        assertEquals(type, result)
+        repo.store(types, testFile.path, md5)
+        val result = interactor.getValidCachedTypesForFile(testFile.path)
+        assertEquals(types, result)
     }
 
     @Test
     fun `returns null and deletes cache if md5 does not match`() {
-        val type = "MyType"
+        val types = listOf("MyType")
         val md5 = md5Of(testFile)
-        repo.store(type, testFile.path, md5)
+        repo.store(types, testFile.path, md5)
         testFile.writeText("changed content")
-        val result = interactor.getValidCachedTypeForFile(testFile.path)
+        val result = interactor.getValidCachedTypesForFile(testFile.path)
         assertNull(result)
         assertNull(repo.getDocumentByFilename(testFile.path))
     }
 
     @Test
     fun `returns null and deletes cache if file does not exist`() {
-        val type = "MyType"
+        val types = listOf("MyType")
         val md5 = md5Of(testFile)
-        repo.store(type, testFile.path, md5)
+        repo.store(types, testFile.path, md5)
         testFile.delete()
-        val result = interactor.getValidCachedTypeForFile(testFile.path)
+        val result = interactor.getValidCachedTypesForFile(testFile.path)
         assertNull(result)
         assertNull(repo.getDocumentByFilename(testFile.path))
     }
 }
+
 

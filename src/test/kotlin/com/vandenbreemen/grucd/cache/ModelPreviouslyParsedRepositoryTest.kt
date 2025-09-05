@@ -24,19 +24,28 @@ class ModelPreviouslyParsedRepositoryTest {
     }
 
     @Test
-    fun `store and retrieve type by filename`() {
-        val type = "MyType"
+    fun `store and retrieve multiple types by filename`() {
+        val types = listOf("TypeA", "TypeB", "TypeC")
         val filename = "file1.kt"
         val md5 = "abc123"
-        repo.store(type, filename, md5)
-        val result = repo.getTypeByFilename(filename)
-        assertEquals(type, result)
+        repo.store(types, filename, md5)
+        val result = repo.getTypesByFilename(filename)
+        assertEquals(types, result)
+    }
+
+    @Test
+    fun `store and retrieve single type by filename`() {
+        val types = listOf("MyType")
+        val filename = "file2.kt"
+        val md5 = "def456"
+        repo.store(types, filename, md5)
+        val result = repo.getTypesByFilename(filename)
+        assertEquals(types, result)
     }
 
     @Test
     fun `returns null for unknown filename`() {
-        val result = repo.getTypeByFilename("nonexistent.kt")
+        val result = repo.getTypesByFilename("nonexistent.kt")
         assertNull(result)
     }
 }
-

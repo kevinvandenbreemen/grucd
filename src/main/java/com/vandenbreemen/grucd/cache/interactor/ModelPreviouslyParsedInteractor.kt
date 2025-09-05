@@ -6,10 +6,10 @@ import java.security.MessageDigest
 
 class ModelPreviouslyParsedInteractor(private val repository: ModelPreviouslyParsedRepository) {
     /**
-     * Returns the cached type for the given file path if the cache is valid (md5 matches).
+     * Returns the cached types for the given file path if the cache is valid (md5 matches).
      * If the cache is invalid, deletes the cache entry and returns null.
      */
-    fun getValidCachedTypeForFile(filePath: String): String? {
+    fun getValidCachedTypesForFile(filePath: String): List<String>? {
         val doc = repository.getDocumentByFilename(filePath) ?: return null
         val file = File(filePath)
         if (!file.exists()) {
@@ -26,7 +26,7 @@ class ModelPreviouslyParsedInteractor(private val repository: ModelPreviouslyPar
             md.digest().joinToString("") { "%02x".format(it) }
         }
         return if (currentMd5 == doc.md5) {
-            doc.type
+            doc.types
         } else {
             repository.deleteByFilename(filePath)
             null

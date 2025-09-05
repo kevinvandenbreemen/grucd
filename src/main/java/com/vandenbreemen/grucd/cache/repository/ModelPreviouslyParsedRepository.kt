@@ -11,14 +11,14 @@ class ModelPreviouslyParsedRepository {
         .openOrCreate()
     private val repository: ObjectRepository<ParsedTypeDocument> = db.getRepository(ParsedTypeDocument::class.java)
 
-    fun store(type: String, filename: String, md5: String) {
-        val doc = ParsedTypeDocument(filename, type, md5)
+    fun store(types: List<String>, filename: String, md5: String) {
+        val doc = ParsedTypeDocument(filename, types, md5)
         repository.update(doc, true) // upsert
     }
 
-    fun getTypeByFilename(filename: String): String? {
+    fun getTypesByFilename(filename: String): List<String>? {
         val doc = repository.find(ObjectFilters.eq("filename", filename)).firstOrNull()
-        return doc?.type
+        return doc?.types
     }
 
     fun getDocumentByFilename(filename: String): ParsedTypeDocument? {
