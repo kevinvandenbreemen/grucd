@@ -4,23 +4,17 @@ import com.strumenta.kotlinmultiplatform.Type
 import org.amshove.kluent.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import java.io.File
 
 class SourceCodeExtractorTest {
 
     val dynamicFilePath = "./src/test/resources/kotlin/localupdate"
     val dynamicFileName = "LocalUpdate.kt"
 
-    private var extractor: SourceCodeExtractor? = null
-
     @AfterEach
     fun tearDown() {
-        //  Remove the temporary file
-        val file = java.io.File("$dynamicFilePath/$dynamicFileName")
-        if (file.exists()) {
-            file.delete()
-        }
-        extractor?.close()
-        extractor = null
+        //  Delete the type file if it exists
+        File("model-previously-parsed.db").delete()
     }
 
     @Test
@@ -153,34 +147,75 @@ class SourceCodeExtractorTest {
 
     @Test
     fun `should include Swift files when building model`() {
-        val extractor = SourceCodeExtractor()
-        val fileNames = extractor.getFilenamesToVisit(inputFile = null, inputDir = "src/test/resources/swift")
+        SourceCodeExtractor().use { extractor ->
+            val fileNames = extractor.getFilenamesToVisit(inputFile = null, inputDir = "src/test/resources/swift")
 
-        // Ensure .swift files are detected
-        fileNames.shouldNotBeEmpty()
-        assert(fileNames.any { it.endsWith(".swift") })
+            // Ensure .swift files are detected
+            fileNames.shouldNotBeEmpty()
+            assert(fileNames.any { it.endsWith(".swift") })
 
-        val model = extractor.buildModelWithFiles(fileNames)
+            val model = extractor.buildModelWithFiles(fileNames)
 
-        // Ensure Swift types are parsed into the model
-        model.typesWithName("Car").shouldNotBeEmpty()
-        model.typesWithName("Drivable").shouldNotBeEmpty()
-        model.typesWithName("Person").shouldNotBeEmpty()
+            // Ensure Swift types are parsed into the model
+            model.typesWithName("Car").shouldNotBeEmpty()
+            model.typesWithName("Drivable").shouldNotBeEmpty()
+            model.typesWithName("Person").shouldNotBeEmpty()
+        }
     }
 
     @Test
     fun `should not register the same type twice when parsing multiple files`() {
-        val extractor = SourceCodeExtractor()
+        SourceCodeExtractor().use { extractor ->
+            val directory = "src/test/resources/swift"
+            val fileNames = extractor.getFilenamesToVisit(inputFile = null, inputDir = directory)
+            val model = extractor.buildModelWithFiles(fileNames)
+            //  There should only be one Car type
+            model.types.filter { t->t.name == "Drawable" }.size shouldBeEqualTo 1
+        }
+    }
 
-        val directory = "src/test/resources/swift"
+    @Test
+    fun `should get consistent results when dealing with types with extensions`() {
 
-        val fileNames = extractor.getFilenamesToVisit(inputFile = null, inputDir = directory)
+        val model1 = SourceCodeExtractor().use { extractor ->
+            val directory = "src/test/resources/swift"
+            val fileNames = extractor.getFilenamesToVisit(inputFile = null, inputDir = directory)
+            extractor.buildModelWithFiles(fileNames)
+        }
 
-        val model = extractor.buildModelWithFiles(fileNames)
+        val model2 = SourceCodeExtractor().use { extractor ->
+            val directory = "src/test/resources/swift"
+            val fileNames = extractor.getFilenamesToVisit(inputFile = null, inputDir = directory)
+            extractor.buildModelWithFiles(fileNames)
+        }
 
-        //  There should only be one Car type
-        model.types.filter { t->t.name == "Drawable" }.size shouldBeEqualTo 1
+        //  Validate drawable looks the same
+        val drawable1 = model1.typesWithName("Drawable").first()
+        val drawable2 = model2.typesWithName("Drawable").first()
+        //  Compare fields
+        drawable1.fields.size shouldBeEqualTo drawable2.fields.size
+        drawable1.fields.forEach { field1 ->
+            val field2 = drawable2.fields.firstOrNull { f ->
+                f.name == field1
+                    .name
+            }
+            field2.shouldNotBeNull()
+            field1.typeName shouldBeEqualTo field2!!.typeName
+        }
 
+        //  Compare methods
+        drawable1.methods.size shouldBeEqualTo drawable2.methods.size
+        drawable1.methods.forEach { method1 ->
+            val method2 = drawable2.methods.firstOrNull { m -> m.name == method1.name }
+            method2.shouldNotBeNull()
+            method1.returnType shouldBeEqualTo method2!!.returnType
+            method1.parameters.size shouldBeEqualTo method2.parameters.size
+            method1.parameters.forEachIndexed { idx, param1 ->
+                val param2 = method2.parameters[idx]
+                param1.name shouldBeEqualTo param2.name
+                param1.typeName shouldBeEqualTo param2.typeName
+            }
+        }
     }
 
 }

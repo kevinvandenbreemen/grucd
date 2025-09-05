@@ -138,6 +138,12 @@ class SourceCodeExtractor: Closeable {
             true
         }
 
+        // After visiting all files, parse Swift files together to merge extensions
+        if (swiftFiles.isNotEmpty()) {
+            val mergedSwiftTypes = swiftParser.parse(swiftFiles)
+            allTypes.addAll(mergedSwiftTypes)
+        }
+
         val modelBuilder = ModelBuilder()
         return modelBuilder.build(filtered)
     }
