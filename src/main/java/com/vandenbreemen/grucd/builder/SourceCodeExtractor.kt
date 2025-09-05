@@ -14,12 +14,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.isDirectory
 
-@Deprecated("Going to be using ParsedTypeDocument and ModelPreviouslyParsedRepository instead")
-internal data class FileAssociatedChecksumAndTypes (
-    val checksum: String,
-    val types: List<Type>
-)
-
 /**
  * Scours a file or directory for files to parse
  */
@@ -35,12 +29,6 @@ class SourceCodeExtractor: Closeable {
      * General filtering logic
      */
     private val filters = mutableListOf<(Type)->Boolean>()
-
-    /**
-     * Mapping from file absolute path to its checksum.  This is used to detect changes in files
-     */
-    @Deprecated("Please use cacheInteractor instead")
-    private var fileChecksums: MutableMap<String, FileAssociatedChecksumAndTypes>? = null
 
     private val cacheInteractor = ModelPreviouslyParsedInteractor(
         ModelPreviouslyParsedRepository()
@@ -97,20 +85,6 @@ class SourceCodeExtractor: Closeable {
         return doVisitSpecificFiles(filesToVisit, false)
     }
 
-    private fun calculateMd5(filePath: String): String {
-        val file = java.io.File(filePath)
-        if (!file.exists()) return ""
-        val md = java.security.MessageDigest.getInstance("MD5")
-        file.inputStream().use { fis ->
-            val buffer = ByteArray(8192)
-            var read: Int
-            while (fis.read(buffer).also { read = it } != -1) {
-                md.update(buffer, 0, read)
-            }
-        }
-        return md.digest().joinToString("") { "%02x".format(it) }
-    }
-
     private fun doVisitSpecificFiles(filesToVisit: List<String>, useCachedTypes: Boolean): Model {
         val java = ParseJava()
         val kotlin = ParseKotlin()
@@ -153,11 +127,6 @@ class SourceCodeExtractor: Closeable {
 
     fun filterEachType(filter: (Type)->Boolean): SourceCodeExtractor {
         this.filters.add(filter)
-        return this
-    }
-
-    fun detectFileDeltas(): SourceCodeExtractor {
-        fileChecksums = mutableMapOf()
         return this
     }
 

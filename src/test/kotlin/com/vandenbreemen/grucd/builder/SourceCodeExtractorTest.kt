@@ -77,7 +77,7 @@ class SourceCodeExtractorTest {
 
     @Test
     fun `should provide a way to cache unchanged files and detect changes in other files`() {
-        SourceCodeExtractor().detectFileDeltas().use { extractor ->
+        SourceCodeExtractor().use { extractor ->
             //  Set up fake file
             writeFakeCodeToTemporaryFile()
 
