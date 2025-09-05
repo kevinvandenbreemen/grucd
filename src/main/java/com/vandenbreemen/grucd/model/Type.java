@@ -59,15 +59,11 @@ public class Type implements Serializable {
     }
 
     public Type() {
-        this.name = "";
-        this.pkg = "";
-        this.type = TypeType.Class;
         this.fields = new ArrayList<>();
         this.methods = new ArrayList<>();
         this.imports = new ArrayList<>();
         this.superTypeNames = new ArrayList<>();
         this.interfaceNames = new ArrayList<>();
-        this.classDoc = "";
         this.annotations = new ArrayList<>();
     }
 

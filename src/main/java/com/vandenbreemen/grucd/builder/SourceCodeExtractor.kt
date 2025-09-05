@@ -131,7 +131,10 @@ class SourceCodeExtractor {
             }
             allTypes.addAll(parsedTypes)
 
-            //  TODO    Add/update cache entry for the list of parsed type and file using ModelPreviouslyParsedInteractor
+            cacheInteractor.storeFileTypesWithChecksum(
+                file,
+                parsedTypes
+            )
         }
 
         //  Annotation filter

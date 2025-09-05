@@ -1,9 +1,10 @@
 package com.vandenbreemen.grucd.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Method {
+public class Method implements Serializable  {
 
     private String name;
     private String returnType;
@@ -12,6 +13,10 @@ public class Method {
     public Method(String name, String returnType) {
         this.name = name;
         this.returnType = returnType;
+        this.parameters = new ArrayList<>();
+    }
+
+    public Method() {
         this.parameters = new ArrayList<>();
     }
 
