@@ -1,4 +1,4 @@
-package com.vandenbreemen.grucd.cache
+package com.vandenbreemen.grucd.cache.repository
 
 import com.vandenbreemen.grucd.cache.model.ParsedTypeDocument
 import org.dizitart.no2.Nitrite
