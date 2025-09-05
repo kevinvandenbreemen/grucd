@@ -1,0 +1,91 @@
+package com.vandenbreemen.grucd.cache.interactor
+
+import com.vandenbreemen.grucd.cache.repository.ModelPreviouslyParsedRepository
+import com.vandenbreemen.grucd.model.Type
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import java.io.File
+import java.security.MessageDigest
+
+class ModelPreviouslyParsedInteractorTest {
+    private lateinit var repo: ModelPreviouslyParsedRepository
+    private lateinit var interactor: ModelPreviouslyParsedInteractor
+    private val testFile = File("testfile.txt")
+
+    @BeforeEach
+    fun setUp() {
+        File("model-previously-parsed.db").delete()
+        repo = ModelPreviouslyParsedRepository()
+        interactor = ModelPreviouslyParsedInteractor(repo)
+        testFile.writeText("original content")
+    }
+
+    @AfterEach
+    fun tearDown() {
+        repo.close()
+        File("model-previously-parsed.db").delete()
+        testFile.delete()
+    }
+
+    private fun md5Of(file: File): String {
+        return file.inputStream().use { input ->
+            val md = MessageDigest.getInstance("MD5")
+            val buffer = ByteArray(8192)
+            var bytesRead: Int
+            while (input.read(buffer).also { bytesRead = it } != -1) {
+                md.update(buffer, 0, bytesRead)
+            }
+            md.digest().joinToString("") { "%02x".format(it) }
+        }
+    }
+
+    @Test
+    fun `returns cached types if md5 matches`() {
+        val types = listOf(Type("TypeA", "pkgA"), Type("TypeB", "pkgB"))
+        val md5 = md5Of(testFile)
+        repo.store(types, testFile.path, md5)
+        val result = interactor.getValidCachedTypeForFile(testFile.path)
+        assertEquals(types, result)
+    }
+
+    @Test
+    fun `returns null and deletes cache if md5 does not match`() {
+        val types = listOf(Type("TypeA", "pkgA"), Type("TypeB", "pkgB"))
+        val md5 = md5Of(testFile)
+        repo.store(types, testFile.path, md5)
+        testFile.writeText("changed content")
+        val result = interactor.getValidCachedTypeForFile(testFile.path)
+        assertNull(result)
+        assertNull(repo.getDocumentByFilename(testFile.path))
+    }
+
+    @Test
+    fun `returns null and deletes cache if file does not exist`() {
+        val types = listOf(Type("TypeA", "pkgA"), Type("TypeB", "pkgB"))
+        val md5 = md5Of(testFile)
+        repo.store(types, testFile.path, md5)
+        testFile.delete()
+        val result = interactor.getValidCachedTypeForFile(testFile.path)
+        assertNull(result)
+        assertNull(repo.getDocumentByFilename(testFile.path))
+    }
+
+    @Test
+    fun `returns null for unknown filename`() {
+        val result = interactor.getValidCachedTypeForFile("nonexistent.kt")
+        assertNull(result)
+    }
+
+    @Test
+    fun `storeFileTypesWithChecksum stores filename, types, and correct md5`() {
+        val types = listOf(Type("TypeX", "pkgX"), Type("TypeY", "pkgY"))
+        interactor.storeFileTypesWithChecksum(testFile.path, types)
+        val doc = repo.getDocumentByFilename(testFile.path)
+        assertNotNull(doc)
+        assertEquals(testFile.path, doc!!.filename)
+        assertEquals(types, doc.types)
+        assertEquals(md5Of(testFile), doc.md5)
+    }
+}

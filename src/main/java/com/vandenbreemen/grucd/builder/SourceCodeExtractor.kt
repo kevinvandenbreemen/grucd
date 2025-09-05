@@ -1,26 +1,24 @@
 package com.vandenbreemen.grucd.builder
 
+import com.vandenbreemen.grucd.cache.interactor.ModelPreviouslyParsedInteractor
+import com.vandenbreemen.grucd.cache.repository.ModelPreviouslyParsedRepository
 import com.vandenbreemen.grucd.model.Model
 import com.vandenbreemen.grucd.model.Type
 import com.vandenbreemen.grucd.parse.ParseJava
 import com.vandenbreemen.grucd.parse.ParseKotlin
 import com.vandenbreemen.grucd.parse.interactor.SwiftParsingInteractor
 import org.apache.log4j.Logger
+import java.io.Closeable
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.isDirectory
 
-internal data class FileAssociatedChecksumAndTypes (
-    val checksum: String,
-    val types: List<Type>
-)
-
 /**
  * Scours a file or directory for files to parse
  */
-class SourceCodeExtractor {
+class SourceCodeExtractor: Closeable {
 
     companion object {
 
@@ -33,10 +31,9 @@ class SourceCodeExtractor {
      */
     private val filters = mutableListOf<(Type)->Boolean>()
 
-    /**
-     * Mapping from file absolute path to its checksum.  This is used to detect changes in files
-     */
-    private var fileChecksums: MutableMap<String, FileAssociatedChecksumAndTypes>? = null
+    private val cacheInteractor = ModelPreviouslyParsedInteractor(
+        ModelPreviouslyParsedRepository()
+    )
 
     /**
      * Adds the given annotation name to the list of annotations that will be filtered for.  Note that any non-annotated
@@ -95,20 +92,6 @@ class SourceCodeExtractor {
         return doVisitSpecificFiles(filesToVisit, false)
     }
 
-    private fun calculateMd5(filePath: String): String {
-        val file = java.io.File(filePath)
-        if (!file.exists()) return ""
-        val md = java.security.MessageDigest.getInstance("MD5")
-        file.inputStream().use { fis ->
-            val buffer = ByteArray(8192)
-            var read: Int
-            while (fis.read(buffer).also { read = it } != -1) {
-                md.update(buffer, 0, read)
-            }
-        }
-        return md.digest().joinToString("") { "%02x".format(it) }
-    }
-
     private fun doVisitSpecificFiles(filesToVisit: List<String>, useCachedTypes: Boolean): Model {
         val java = ParseJava()
         val kotlin = ParseKotlin()
@@ -120,12 +103,11 @@ class SourceCodeExtractor {
         val swiftFiles = mutableListOf<String>()
 
         filesToVisit.forEach { file ->
-            val cachedTypes = fileChecksums?.get(file)
-            val currentChecksum = calculateMd5(file)
+            val cachedTypes = cacheInteractor.getValidCachedTypeForFile(file)
             val parsedTypes: List<Type> = if (
-                useCachedTypes && cachedTypes != null && cachedTypes.checksum == currentChecksum
+                useCachedTypes && cachedTypes != null
             ) {
-                cachedTypes.types
+                cachedTypes
             } else {
                 when {
                     file.endsWith(".java") -> java.parse(file) ?: emptyList()
@@ -138,53 +120,14 @@ class SourceCodeExtractor {
                     else -> emptyList()
                 }
             }
-            if (!file.endsWith(".swift")) {
-                allTypes.addAll(parsedTypes)
-                fileChecksums?.let {
-                    if (it.containsKey(file)) {
-                        it[file] = it[file]!!.copy(types = parsedTypes, checksum = currentChecksum)
-                    } else {
-                        it[file] = FileAssociatedChecksumAndTypes(
-                            checksum = currentChecksum,
-                            types = parsedTypes.toMutableList()
-                        )
-                    }
-                }
-            }
+            allTypes.addAll(parsedTypes)
+
+            cacheInteractor.storeFileTypesWithChecksum(
+                file,
+                parsedTypes
+            )
         }
 
-        // Now handle Swift files in batch to merge extension members with base types
-        if (swiftFiles.isNotEmpty()) {
-            // Check cache status across all swift files
-            val swiftCachedConsistent = useCachedTypes && fileChecksums != null && swiftFiles.all { file ->
-                val entry = fileChecksums!![file]
-                entry != null && entry.checksum == calculateMd5(file)
-            }
-
-            val swiftTypes: List<Type> = if (swiftCachedConsistent) {
-                // Reuse cached types from the first swift file entry (they are identical merged set)
-                fileChecksums!![swiftFiles.first()]?.types ?: emptyList()
-            } else {
-                swiftParser.parse(swiftFiles)
-            }
-
-            allTypes.addAll(swiftTypes)
-
-            // Update cache entries for each swift file
-            fileChecksums?.let { cache ->
-                swiftFiles.forEach { file ->
-                    val checksum = calculateMd5(file)
-                    if (cache.containsKey(file)) {
-                        cache[file] = cache[file]!!.copy(types = swiftTypes, checksum = checksum)
-                    } else {
-                        cache[file] = FileAssociatedChecksumAndTypes(
-                            checksum = checksum,
-                            types = swiftTypes.toMutableList()
-                        )
-                    }
-                }
-            }
-        }
 
         //  Annotation filter
         val filtered = if(filters.isEmpty()) allTypes else allTypes.filter { type->
@@ -204,11 +147,6 @@ class SourceCodeExtractor {
         return this
     }
 
-    fun detectFileDeltas(): SourceCodeExtractor {
-        fileChecksums = mutableMapOf()
-        return this
-    }
-
     /**
      * @return  Updated copy of the model with the changes from the files in the input directory
      */
@@ -220,5 +158,8 @@ class SourceCodeExtractor {
 
     }
 
+    override fun close() {
+        cacheInteractor.close()
+    }
 
 }

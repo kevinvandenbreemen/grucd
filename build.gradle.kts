@@ -43,6 +43,9 @@ dependencies {
     implementation("com.github.kotlinx.ast:common:$kotlinParserVersion")
     implementation("com.github.kotlinx.ast:grammar-kotlin-parser-antlr-kotlin-jvm:$kotlinParserVersion")
 
+    val nitriteVersion = "3.4.4"
+    implementation("org.dizitart:nitrite:$nitriteVersion")
+
     //  Swift parsing
     val antlrVersion = "4.13.1"
     antlr("org.antlr:antlr4:4.13.1")
