@@ -77,4 +77,15 @@ class ModelPreviouslyParsedInteractorTest {
         val result = interactor.getValidCachedTypeForFile("nonexistent.kt")
         assertNull(result)
     }
+
+    @Test
+    fun `storeFileTypesWithChecksum stores filename, types, and correct md5`() {
+        val types = listOf(Type("TypeX", "pkgX"), Type("TypeY", "pkgY"))
+        interactor.storeFileTypesWithChecksum(testFile.path, types)
+        val doc = repo.getDocumentByFilename(testFile.path)
+        assertNotNull(doc)
+        assertEquals(testFile.path, doc!!.filename)
+        assertEquals(types, doc.types)
+        assertEquals(md5Of(testFile), doc.md5)
+    }
 }

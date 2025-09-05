@@ -33,4 +33,22 @@ class ModelPreviouslyParsedInteractor(private val repository: ModelPreviouslyPar
             null
         }
     }
+
+    /**
+     * Stores the given filename and its associated types, along with the current MD5 checksum of the file.
+     */
+    fun storeFileTypesWithChecksum(filePath: String, types: List<Type>) {
+        val file = File(filePath)
+        if (!file.exists()) return
+        val md5 = file.inputStream().use { input ->
+            val md = MessageDigest.getInstance("MD5")
+            val buffer = ByteArray(8192)
+            var bytesRead: Int
+            while (input.read(buffer).also { bytesRead = it } != -1) {
+                md.update(buffer, 0, bytesRead)
+            }
+            md.digest().joinToString("") { "%02x".format(it) }
+        }
+        repository.store(types, filePath, md5)
+    }
 }

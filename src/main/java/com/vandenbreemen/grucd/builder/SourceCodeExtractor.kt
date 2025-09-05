@@ -117,12 +117,11 @@ class SourceCodeExtractor {
         val allTypes: MutableList<Type> = ArrayList<Type>()
 
         filesToVisit.forEach { file ->
-            val cachedTypes = fileChecksums?.get(file)
-            val currentChecksum = calculateMd5(file)
+            val cachedTypes = cacheInteractor.getValidCachedTypeForFile(file)
             val parsedTypes: List<Type> = if (
-                useCachedTypes && cachedTypes != null && cachedTypes.checksum == currentChecksum
+                useCachedTypes && cachedTypes != null
             ) {
-                cachedTypes.types
+                cachedTypes
             } else {
                 when {
                     file.endsWith(".java") -> java.parse(file) ?: emptyList()
@@ -132,16 +131,7 @@ class SourceCodeExtractor {
             }
             allTypes.addAll(parsedTypes)
 
-            fileChecksums?.let {
-                if (it.containsKey(file)) {
-                    it[file] = it[file]!!.copy(types = parsedTypes, checksum = currentChecksum)
-                } else {
-                    it[file] = FileAssociatedChecksumAndTypes(
-                        checksum = currentChecksum,
-                        types = parsedTypes.toMutableList()
-                    )
-                }
-            }
+            //  TODO    Add/update cache entry for the list of parsed type and file using ModelPreviouslyParsedInteractor
         }
 
         //  Annotation filter
