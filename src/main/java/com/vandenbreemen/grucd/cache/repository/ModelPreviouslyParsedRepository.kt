@@ -21,6 +21,14 @@ class ModelPreviouslyParsedRepository {
         return doc?.type
     }
 
+    fun getDocumentByFilename(filename: String): ParsedTypeDocument? {
+        return repository.find(ObjectFilters.eq("filename", filename)).firstOrNull()
+    }
+
+    fun deleteByFilename(filename: String) {
+        repository.remove(ObjectFilters.eq("filename", filename))
+    }
+
     fun close() {
         db.close()
     }
