@@ -7,6 +7,7 @@ import com.vandenbreemen.grucd.model.Type
 import com.vandenbreemen.grucd.parse.ParseJava
 import com.vandenbreemen.grucd.parse.ParseKotlin
 import org.apache.log4j.Logger
+import java.io.Closeable
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -22,7 +23,7 @@ internal data class FileAssociatedChecksumAndTypes (
 /**
  * Scours a file or directory for files to parse
  */
-class SourceCodeExtractor {
+class SourceCodeExtractor: Closeable {
 
     companion object {
 
@@ -171,5 +172,8 @@ class SourceCodeExtractor {
 
     }
 
+    override fun close() {
+        cacheInteractor.close()
+    }
 
 }

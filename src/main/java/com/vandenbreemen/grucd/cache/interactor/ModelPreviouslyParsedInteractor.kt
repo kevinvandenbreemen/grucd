@@ -51,4 +51,8 @@ class ModelPreviouslyParsedInteractor(private val repository: ModelPreviouslyPar
         }
         repository.store(types, filePath, md5)
     }
+
+    fun close() {
+        repository.close()
+    }
 }
