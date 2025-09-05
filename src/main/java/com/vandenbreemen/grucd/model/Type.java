@@ -2,13 +2,14 @@ package com.vandenbreemen.grucd.model;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Represents a class/interface/enum
  */
-public class Type {
+public class Type implements Serializable {
 
     private String name;
 
@@ -55,6 +56,15 @@ public class Type {
 
     public Type(String name, String pkg) {
         this(name, pkg, TypeType.Class);
+    }
+
+    public Type() {
+        this.fields = new ArrayList<>();
+        this.methods = new ArrayList<>();
+        this.imports = new ArrayList<>();
+        this.superTypeNames = new ArrayList<>();
+        this.interfaceNames = new ArrayList<>();
+        this.annotations = new ArrayList<>();
     }
 
     public void addSuperType(String name) {
@@ -142,5 +152,20 @@ public class Type {
                 ", methods=" + methods +
                 ", pkg='" + pkg + '\'' +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Type type1 = (Type) o;
+        return name.equals(type1.name) && pkg.equals(type1.pkg);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = name.hashCode();
+        result = 31 * result + pkg.hashCode();
+        return result;
     }
 }

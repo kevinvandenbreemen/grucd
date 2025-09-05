@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 /**
  * Abstract representation of any annotation
  */
-public class Annotation {
+public class Annotation implements java.io.Serializable {
 
     private String typeName;
 

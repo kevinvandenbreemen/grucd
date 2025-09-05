@@ -1,9 +1,10 @@
 package com.vandenbreemen.grucd.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Field {
+public class Field implements Serializable  {
 
     private String name;
     private String typeName;
@@ -22,6 +23,12 @@ public class Field {
         this.typeName = typeName;
         this.visibility = visibility;
         this.typeArguments = new ArrayList<>();
+    }
+
+    public Field() {
+        this.typeArguments = new ArrayList<>();
+        this.show = true;
+        this.visibility = Visibility.Public;
     }
 
     public void addTypeArgument(String type) {

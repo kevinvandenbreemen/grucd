@@ -42,6 +42,8 @@ dependencies {
     implementation("com.github.kotlinx.ast:common:$kotlinParserVersion")
     implementation("com.github.kotlinx.ast:grammar-kotlin-parser-antlr-kotlin-jvm:$kotlinParserVersion")
 
+    val nitriteVersion = "3.4.4"
+    implementation("org.dizitart:nitrite:$nitriteVersion")
 }
 
 tasks.getByName<Test>("test") {

@@ -1,25 +1,23 @@
 package com.vandenbreemen.grucd.builder
 
+import com.vandenbreemen.grucd.cache.interactor.ModelPreviouslyParsedInteractor
+import com.vandenbreemen.grucd.cache.repository.ModelPreviouslyParsedRepository
 import com.vandenbreemen.grucd.model.Model
 import com.vandenbreemen.grucd.model.Type
 import com.vandenbreemen.grucd.parse.ParseJava
 import com.vandenbreemen.grucd.parse.ParseKotlin
 import org.apache.log4j.Logger
+import java.io.Closeable
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.isDirectory
 
-internal data class FileAssociatedChecksumAndTypes (
-    val checksum: String,
-    val types: List<Type>
-)
-
 /**
  * Scours a file or directory for files to parse
  */
-class SourceCodeExtractor {
+class SourceCodeExtractor: Closeable {
 
     companion object {
 
@@ -32,10 +30,9 @@ class SourceCodeExtractor {
      */
     private val filters = mutableListOf<(Type)->Boolean>()
 
-    /**
-     * Mapping from file absolute path to its checksum.  This is used to detect changes in files
-     */
-    private var fileChecksums: MutableMap<String, FileAssociatedChecksumAndTypes>? = null
+    private val cacheInteractor = ModelPreviouslyParsedInteractor(
+        ModelPreviouslyParsedRepository()
+    )
 
     /**
      * Adds the given annotation name to the list of annotations that will be filtered for.  Note that any non-annotated
@@ -88,20 +85,6 @@ class SourceCodeExtractor {
         return doVisitSpecificFiles(filesToVisit, false)
     }
 
-    private fun calculateMd5(filePath: String): String {
-        val file = java.io.File(filePath)
-        if (!file.exists()) return ""
-        val md = java.security.MessageDigest.getInstance("MD5")
-        file.inputStream().use { fis ->
-            val buffer = ByteArray(8192)
-            var read: Int
-            while (fis.read(buffer).also { read = it } != -1) {
-                md.update(buffer, 0, read)
-            }
-        }
-        return md.digest().joinToString("") { "%02x".format(it) }
-    }
-
     private fun doVisitSpecificFiles(filesToVisit: List<String>, useCachedTypes: Boolean): Model {
         val java = ParseJava()
         val kotlin = ParseKotlin()
@@ -109,12 +92,11 @@ class SourceCodeExtractor {
         val allTypes: MutableList<Type> = ArrayList<Type>()
 
         filesToVisit.forEach { file ->
-            val cachedTypes = fileChecksums?.get(file)
-            val currentChecksum = calculateMd5(file)
+            val cachedTypes = cacheInteractor.getValidCachedTypeForFile(file)
             val parsedTypes: List<Type> = if (
-                useCachedTypes && cachedTypes != null && cachedTypes.checksum == currentChecksum
+                useCachedTypes && cachedTypes != null
             ) {
-                cachedTypes.types
+                cachedTypes
             } else {
                 when {
                     file.endsWith(".java") -> java.parse(file) ?: emptyList()
@@ -124,16 +106,10 @@ class SourceCodeExtractor {
             }
             allTypes.addAll(parsedTypes)
 
-            fileChecksums?.let {
-                if (it.containsKey(file)) {
-                    it[file] = it[file]!!.copy(types = parsedTypes, checksum = currentChecksum)
-                } else {
-                    it[file] = FileAssociatedChecksumAndTypes(
-                        checksum = currentChecksum,
-                        types = parsedTypes.toMutableList()
-                    )
-                }
-            }
+            cacheInteractor.storeFileTypesWithChecksum(
+                file,
+                parsedTypes
+            )
         }
 
         //  Annotation filter
@@ -154,11 +130,6 @@ class SourceCodeExtractor {
         return this
     }
 
-    fun detectFileDeltas(): SourceCodeExtractor {
-        fileChecksums = mutableMapOf()
-        return this
-    }
-
     /**
      * @return  Updated copy of the model with the changes from the files in the input directory
      */
@@ -170,5 +141,8 @@ class SourceCodeExtractor {
 
     }
 
+    override fun close() {
+        cacheInteractor.close()
+    }
 
 }
